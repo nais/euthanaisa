@@ -44,5 +44,5 @@ jobs:
       - uses: nais/fasit-deploy@v2
         with:
           chart: ${{ env.IMAGE_REPOSITORY }}/${{ env.NAME }}}
-          version: ${{ steps.build_push.outputs.version }}
+          version: ${{ steps.build-push-sign.outputs.version }}
           feature_name: ${{ env.NAME }}
