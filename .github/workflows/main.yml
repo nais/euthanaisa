@@ -8,6 +8,8 @@ env:
   NAME: euthanaisa
 jobs:
   build_push:
+    outputs: 
+      version: ${{ steps.build-push-sign.outputs.version }}
     permissions:
       contents: "read"
       id-token: "write"
@@ -44,5 +46,5 @@ jobs:
       - uses: nais/fasit-deploy@v2
         with:
           chart: ${{ env.IMAGE_REPOSITORY }}/${{ env.NAME }}}
-          version: ${{ steps.build-push-sign.outputs.version }}
+          version: ${{ needs.build_push.outputs.version }}
           feature_name: ${{ env.NAME }}
