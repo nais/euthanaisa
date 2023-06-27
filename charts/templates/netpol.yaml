@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "{{ .Release.Name }}"
+spec:
+  egress:
+    - to:
+        - namespaceSelector:
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    - to:
+        - namespaceSelector: nais-system
+          podSelector:
+            matchLabels:
+              app: prometheus-pushgateway
+    - ports:
+        - port: 443
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: "{{ .Values.apiserverIP }}/32"
+  podSelector:
+    matchLabels:
+      app: "{{ .Release.Name }}"
+  policyTypes:
+    - Egress

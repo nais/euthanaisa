@@ -1,0 +1,9 @@
+environmentKinds:
+  - tenant
+  - onprem
+  - legacy
+values:
+  apiserverIP:
+    displayName: Kubernetes apiserver IP
+    computed:
+      template: "{{ .Env.apiserver_endpoint }}"

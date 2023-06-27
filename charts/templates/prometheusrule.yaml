@@ -1,0 +1,29 @@
+{{ if .Values.alerts }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: "{{ .Release.Name }}"
+spec:
+  groups:
+    - name: "{{ .Release.Name }}"
+      rules:
+      - alert: EuthanaisaNotRunning
+        expr: kube_job_complete{job_name="euthanaisa"} == 0
+        for: 6h
+        labels:
+          namespace: nais-system
+          severity: warning
+        annotations:
+          consequence: Workloads that should be removed, isn't.
+          action: "Check logs in euthanaisa"
+
+      - alert: Euthanaisa errors increasing
+        expr: increase(euthanaisa_errors[30m]) > 0
+        for: 6h
+        labels:
+          namespace: nais-system
+          severity: warning
+        annotations:
+          consequence: Workloads that should be removed, isn't.
+          action: "Check logs in euthanaisa"
+{{- end }}

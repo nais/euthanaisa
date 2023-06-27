@@ -1,0 +1,46 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ .Release.Name }}"
+spec:
+  schedule: "{{ .Values.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: "{{ .Release.Name }}"
+        spec:
+          serviceAccountName: "{{ .Release.Name }}"
+          containers:
+            - name: "{{ .Chart.Name }}"
+              {{- if .Values.pushgatewayURL }}
+              env: 
+                - name: "PUSHGATEWAY_URL"
+                  value: "{{ .Values.pushgatewayURL }}"
+              {{- end }} 
+              securityContext:
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 1069
+                allowPrivilegeEscalation: false
+                seccompProfile:
+                  type: RuntimeDefault
+              image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Chart.Version }}"
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 512Mi
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+          serviceAccountName: "{{ .Release.Name }}"
+          securityContext:
+            runAsUser: 1069
+            runAsGroup: 1069
+            fsGroup: 1069
+          restartPolicy: OnFailure
