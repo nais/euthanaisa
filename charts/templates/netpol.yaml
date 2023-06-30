@@ -5,7 +5,7 @@ metadata:
 spec:
   egress:
     - to:
-        - namespaceSelector:
+        - namespaceSelector: kube-system
           podSelector:
             matchLabels:
               k8s-app: kube-dns
