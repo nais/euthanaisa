@@ -5,12 +5,12 @@ metadata:
 spec:
   egress:
     - to:
-        - namespaceSelector: kube-system
+        - namespaceSelector: {}
           podSelector:
             matchLabels:
               k8s-app: kube-dns
     - to:
-        - namespaceSelector: nais-system
+        - namespaceSelector: {}
           podSelector:
             matchLabels:
               app: prometheus-pushgateway
