@@ -3,3 +3,5 @@ name: euthanaisa
 description: Killing workloads with a death wish
 type: application
 version: 1.0.0
+sources:
+  - https://github.com/nais/euthanaisa/tree/main/charts
