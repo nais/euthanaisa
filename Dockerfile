@@ -1,12 +1,12 @@
-FROM golang:1.20-alpine as builder
-RUN apk add --no-cache git make
-COPY . /src
+ARG GO_VERSION=""
+FROM golang:${GO_VERSION}alpine as builder
 WORKDIR /src
-RUN rm -f go.sum
-RUN go get ./...
-RUN make linux-binary
+COPY go.* /src/
+RUN go mod download
+COPY . /src
+RUN go build -o bin/euthanaisa ./cmd/euthanaisa
 
 FROM gcr.io/distroless/base
 WORKDIR /app
-COPY --from=builder /src/bin/app /app/binary
-ENTRYPOINT ["/app/binary"]
+COPY --from=builder /src/bin/euthanaisa /app/euthanaisa
+ENTRYPOINT ["/app/euthanaisa"]
