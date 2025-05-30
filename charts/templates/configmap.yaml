@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-resources
+data:
+  RESOURCES: |
+    {{ toYaml .Values.resources | nindent 4 }}

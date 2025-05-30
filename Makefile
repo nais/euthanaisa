@@ -4,19 +4,35 @@ local:
 linux-binary:
 	GOOS=linux GOARCH=amd64 go build -o bin/euthanaisa cmd/euthanaisa/main.go
 
-check: staticcheck vulncheck deadcode
+test:
+	go test -cover ./...
+
+test-coverage:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
+
+check: fmt vulncheck deadcode gosec staticcheck goimport
+
+goimport:
+	@echo "Running goimport..."
+	go run golang.org/x/tools/cmd/goimports@latest -l -w .
+
+fmt:
+	@echo "Running go fmt..."
+	go fmt ./...
 
 staticcheck:
-	go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+	@echo "Running staticcheck..."
+	go run honnef.co/go/tools/cmd/staticcheck@latest -f=stylish ./...
 
 vulncheck:
+	@echo "Running vulncheck..."
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 deadcode:
-	go run golang.org/x/tools/cmd/deadcode@latest -test ./...
+	@echo "Running deadcode..."
+	go run golang.org/x/tools/cmd/deadcode@latest ./...
 
-fmt:
-	go run mvdan.cc/gofumpt@latest -w ./
-
-helm-lint:
-	helm lint --strict ./charts
+gosec:
+	@echo "Running gosec..."
+	go run github.com/securego/gosec/v2/cmd/gosec@latest --exclude G404,G101,G115,G402 --exclude-generated -terse ./...

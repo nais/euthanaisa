@@ -16,10 +16,10 @@ spec:
           containers:
             - name: "{{ .Chart.Name }}"
               {{- if .Values.pushgatewayURL }}
-              env: 
+              env:
                 - name: "PUSHGATEWAY_URL"
                   value: "{{ .Values.pushgatewayURL }}"
-              {{- end }} 
+              {{- end }}
               securityContext:
                 capabilities:
                   drop:
@@ -38,6 +38,9 @@ spec:
                 requests:
                   cpu: 50m
                   memory: 64Mi
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-resources
           serviceAccountName: "{{ .Release.Name }}"
           securityContext:
             runAsUser: 1069

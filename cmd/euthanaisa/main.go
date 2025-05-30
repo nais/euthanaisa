@@ -2,51 +2,60 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 	"os"
 
+	"github.com/nais/euthanaisa/internal/logger"
+
+	"github.com/joho/godotenv"
+	"github.com/nais/euthanaisa/internal/config"
 	"github.com/nais/euthanaisa/internal/euthanaiser"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-var (
-	logLevel       string
-	pushgatewayURL string
+const (
+	exitCodeSuccess = iota
+	exitCodeRunError
+	exitCodeLoggerError
 )
-
-func init() {
-	flag.StringVar(&logLevel, "log-level", envOrDefault("LOG_LEVEL", "info"), "Application log level")
-	flag.StringVar(&pushgatewayURL, "pushgateway-url", envOrDefault("PUSHGATEWAY_URL", "http://prometheus-pushgateway.nais-system:9091"), "Pushgateway URL")
-}
 
 func main() {
-	flag.Parse()
-	log := setupLogger(logLevel)
-	log.Infof("Starting euthanaisa with log level %s and pushgateway URL %s", logLevel, pushgatewayURL)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	e, err := euthanaiser.New(log, pushgatewayURL)
+	l := logrus.StandardLogger()
+
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("No .env file found")
 	}
 
-	e.Run(context.Background())
+	cfg, err := config.NewConfig()
+	if err != nil {
+		l.WithError(err).Errorf("error when processing configuration")
+		os.Exit(exitCodeRunError)
+	}
+
+	appLog := setupLogger(l, cfg.LogFormat, cfg.LogLevel)
+
+	appLog.Infof("Starting euthanaisa with log level %s", cfg.LogLevel)
+
+	e, err := euthanaiser.New(cfg, appLog.WithField("application", "euthanaisa"))
+	if err != nil {
+		appLog.WithError(err).Errorf("error when initializing euthanaisa")
+		os.Exit(exitCodeRunError)
+	}
+
+	e.Run(ctx)
+	os.Exit(exitCodeSuccess)
 }
 
-func envOrDefault(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func setupLogger(level string) *log.Entry {
-	ret := log.New()
-	ret.SetFormatter(&log.JSONFormatter{})
-	ret.SetOutput(os.Stdout)
-	logLevel, err := log.ParseLevel(level)
+func setupLogger(log *logrus.Logger, logFormat, logLevel string) logrus.FieldLogger {
+	appLogger, err := logger.New(logFormat, logLevel)
 	if err != nil {
-		log.Fatalf("parsing log level: %v", err)
+		log.WithError(err).Errorf("error when creating application logger")
+		os.Exit(exitCodeLoggerError)
 	}
-	ret.SetLevel(logLevel)
-	return ret.WithField("application", "euthanaisa")
+
+	return appLogger
 }
