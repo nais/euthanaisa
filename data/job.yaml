@@ -1,0 +1,11 @@
+apiVersion: nais.io/v1
+kind: Naisjob
+metadata:
+  name: eu-job
+spec:
+  schedule: "0 * * * *" # Runs every hour
+  image: europe-north1-docker.pkg.dev/nais-io/nais/images/testapp:latest
+  resources:
+    requests:
+      cpu: 200m
+      memory: 128Mi

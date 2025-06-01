@@ -20,3 +20,6 @@ resources:
   - group: "nais.io"
     version: "v1"
     resource: "naisjobs"
+  - group: "batch"
+    version: "v1"
+    resource: "cronjobs"

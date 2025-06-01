@@ -1,0 +1,15 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: eu-app
+spec:
+  image: europe-north1-docker.pkg.dev/nais-io/nais/images/testapp:latest
+  port: 8080
+  ttl: 1h
+  replicas:
+    max: 1
+    min: 1
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
