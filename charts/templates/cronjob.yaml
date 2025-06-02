@@ -38,10 +38,14 @@ spec:
                 requests:
                   cpu: 50m
                   memory: 64Mi
-              envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-resources
-          serviceAccountName: "{{ .Release.Name }}"
+              volumeMounts:
+                - name: resources
+                  mountPath: /app/config/resources.yaml
+                  subPath: resources.yaml
+          volumes:
+            - name: resources
+              configMap:
+                name: {{ .Release.Name }}-resources
           securityContext:
             runAsUser: 1069
             runAsGroup: 1069

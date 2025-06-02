@@ -7,3 +7,17 @@ values:
     displayName: Kubernetes apiserver IP
     computed:
       template: "{{ .Env.apiserver_endpoint }}"
+  schedule:
+    displayName: Cronjob schedule
+    config:
+      type: string
+  pushgatewayURL:
+    displayName: Pushgateway URL
+    config:
+      type: string
+    computed:
+      template: "http://prometheus-pushgateway.nais-system:9091"
+  logLevel:
+    displayName: Log level
+    config:
+      type: string

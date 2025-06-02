@@ -3,5 +3,5 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-resources
 data:
-  RESOURCES: |
+  resources.yaml: |
     {{ toYaml .Values.resources | nindent 4 }}
