@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/nais/euthanaisa/internal/logger"
@@ -27,7 +26,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("No .env file found")
+		l.WithError(err).Warnf("error when loading .env file, continuing with default environment variables")
 	}
 
 	cfg, err := config.NewConfig()
