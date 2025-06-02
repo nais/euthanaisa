@@ -53,7 +53,7 @@ func New(cfg *config.Config, log logrus.FieldLogger) (*euthanaiser, error) {
 	if cfg.PushgatewayURL != "" {
 		pusher = push.New(cfg.PushgatewayURL, "euthanaisa").Gatherer(registry)
 	} else {
-		log.Infof("Pushgateway URL not set; metrics will not be pushed")
+		log.Infof("pushgateway URL not set; metrics will not be pushed")
 	}
 
 	return &euthanaiser{
@@ -128,7 +128,7 @@ func (e *euthanaiser) process(ctx context.Context, rc resourceHandler, u *unstru
 		"namespace": u.GetNamespace(),
 		"name":      u.GetName(),
 		"resource":  rc.resource.GetName(),
-	}).Debugf("Deleted resource")
+	}).Debugf("deleted resource")
 	rc.metricKilled.Inc()
 	return nil
 }

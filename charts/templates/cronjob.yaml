@@ -15,11 +15,13 @@ spec:
           serviceAccountName: "{{ .Release.Name }}"
           containers:
             - name: "{{ .Chart.Name }}"
-              {{- if .Values.pushgatewayURL }}
               env:
+              {{- if .Values.pushgatewayURL }}
                 - name: "PUSHGATEWAY_URL"
                   value: "{{ .Values.pushgatewayURL }}"
               {{- end }}
+              - name: LOG_LEVEL
+                value: "{{ .Values.logLevel }}"
               securityContext:
                 capabilities:
                   drop:

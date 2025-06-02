@@ -10,6 +10,8 @@ schedule: "*/10 * * * *"
 
 alerts: true
 
+logLevel: debug
+
 resources:
   - group: "apps"
     version: "v1"
