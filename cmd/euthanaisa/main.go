@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"os"
-
-	"github.com/nais/euthanaisa/internal/logger"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
+	"github.com/nais/euthanaisa/internal/client"
 	"github.com/nais/euthanaisa/internal/config"
 	"github.com/nais/euthanaisa/internal/euthanaiser"
+	"github.com/nais/euthanaisa/internal/logger"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -39,7 +43,21 @@ func main() {
 
 	appLog.Infof("Starting euthanaisa with log level %s", cfg.LogLevel)
 
-	e, err := euthanaiser.New(cfg, appLog.WithField("application", "euthanaisa"))
+	kubeConfig, err := kubeconfig()
+	if err != nil {
+		appLog.WithError(err).Errorf("error when getting kubeconfig")
+		os.Exit(exitCodeRunError)
+	}
+
+	registry := prometheus.NewRegistry()
+
+	clients, err := client.LoadResourceClients(cfg.Resources, kubeConfig, registry, appLog.WithField("sub-system", "resource-client"))
+	if err != nil {
+		appLog.WithError(err).Errorf("error when loading resource clients")
+		os.Exit(exitCodeRunError)
+	}
+
+	e, err := euthanaiser.New(cfg, clients, registry, appLog.WithField("system", "euthanaisa"))
 	if err != nil {
 		appLog.WithError(err).Errorf("error when initializing euthanaisa")
 		os.Exit(exitCodeRunError)
@@ -57,4 +75,20 @@ func setupLogger(log *logrus.Logger, logFormat, logLevel string) logrus.FieldLog
 	}
 
 	return appLogger
+}
+
+func kubeconfig() (*rest.Config, error) {
+	if kConfig := os.Getenv("KUBECONFIG"); kConfig != "" {
+		return clientcmd.BuildConfigFromFlags("", kConfig)
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil {
+		kubeconfigPath := filepath.Join(home, ".kube", "config")
+		if _, err := os.Stat(kubeconfigPath); err == nil {
+			return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		}
+	}
+
+	return rest.InClusterConfig()
 }
