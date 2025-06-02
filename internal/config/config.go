@@ -8,15 +8,18 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nais/euthanaisa/internal/resource"
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type Resource interface {
-	GetGroup() string
-	GetVersion() string
-	GetResourceName() string
+type Config struct {
+	Resources      []resource.Resource
+	PushgatewayURL string `envconfig:"PUSHGATEWAY_URL"`
+	LogLevel       string `envconfig:"LOG_LEVEL" default:"info"`
+	LogFormat      string `envconfig:"LOG_FORMAT" default:"json"`
+	ResourcesFile  string `envconfig:"RESOURCES_FILE" default:"/app/config/resources.yaml"`
 }
 
 type resourceConfig struct {
@@ -25,17 +28,9 @@ type resourceConfig struct {
 	Resource string `yaml:"resource"`
 }
 
-func (r *resourceConfig) GetGroup() string        { return r.Group }
-func (r *resourceConfig) GetVersion() string      { return r.Version }
-func (r *resourceConfig) GetResourceName() string { return r.Resource }
-
-type Config struct {
-	Resources      []Resource
-	PushgatewayURL string `envconfig:"PUSHGATEWAY_URL"`
-	LogLevel       string `envconfig:"LOG_LEVEL" default:"info"`
-	LogFormat      string `envconfig:"LOG_FORMAT" default:"json"`
-	ResourcesFile  string `envconfig:"RESOURCES_FILE" default:"/app/config/resources.yaml"`
-}
+func (r *resourceConfig) GetGroup() string   { return r.Group }
+func (r *resourceConfig) GetVersion() string { return r.Version }
+func (r *resourceConfig) GetName() string    { return r.Resource }
 
 func NewConfig() (*Config, error) {
 	err := godotenv.Load()
@@ -64,7 +59,7 @@ func (c *Config) loadResources() {
 		log.Fatalf("failed to unmarshal resources file %s: %v", c.ResourcesFile, err)
 	}
 
-	c.Resources = make([]Resource, len(configs))
+	c.Resources = make([]resource.Resource, len(configs))
 	for i, rc := range configs {
 		c.Resources[i] = &rc
 	}

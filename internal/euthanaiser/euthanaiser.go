@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/nais/euthanaisa/internal/config"
+	"github.com/nais/euthanaisa/internal/resource"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/sirupsen/logrus"
@@ -32,7 +33,7 @@ type resourceHandler struct {
 	client       dynamic.NamespaceableResourceInterface
 	metricKilled prometheus.Counter
 	metricError  prometheus.Counter
-	resource     config.Resource
+	resource     resource.Resource
 }
 
 func New(cfg *config.Config, log logrus.FieldLogger) (*euthanaiser, error) {
@@ -72,7 +73,7 @@ func (e *euthanaiser) Run(ctx context.Context) {
 			// LabelSelector: "euthanaisa.nais.io/kill: true",
 		})
 		if err != nil {
-			e.log.WithError(err).WithField("resource", rc.resource.GetResourceName()).Error("listing resources")
+			e.log.WithError(err).WithField("resource", rc.resource.GetName()).Error("listing resources")
 			rc.metricError.Inc()
 			continue
 		}
@@ -80,7 +81,7 @@ func (e *euthanaiser) Run(ctx context.Context) {
 		for _, item := range list.Items {
 			handler := e.getResourceHandlerForOwnedResource(item, rc)
 			if err := e.process(ctx, handler, &item); err != nil {
-				e.log.WithError(err).WithField("resource", handler.resource.GetResourceName()).Error("processing resource")
+				e.log.WithError(err).WithField("resource", handler.resource.GetName()).Error("processing resource")
 				rc.metricError.Inc()
 			}
 		}
@@ -126,7 +127,7 @@ func (e *euthanaiser) process(ctx context.Context, rc resourceHandler, u *unstru
 	e.log.WithFields(logrus.Fields{
 		"namespace": u.GetNamespace(),
 		"name":      u.GetName(),
-		"resource":  rc.resource.GetResourceName(),
+		"resource":  rc.resource.GetName(),
 	}).Debugf("Deleted resource")
 	rc.metricKilled.Inc()
 	return nil
@@ -171,24 +172,24 @@ func loadResourceHandlers(cfg *config.Config, kc *rest.Config, registry *prometh
 
 	handlers := make(map[string]resourceHandler)
 	for _, resource := range cfg.Resources {
-		gvr := schema.GroupVersionResource{Group: resource.GetGroup(), Version: resource.GetVersion(), Resource: resource.GetResourceName()}
+		gvr := schema.GroupVersionResource{Group: resource.GetGroup(), Version: resource.GetVersion(), Resource: resource.GetName()}
 		metricKilled := prometheus.NewCounter(prometheus.CounterOpts{
-			Name: fmt.Sprintf("euthanaisa_%s_killed", resource.GetResourceName()),
-			Help: fmt.Sprintf("Number of %s %s killed by euthanaisa", resource.GetGroup(), resource.GetResourceName()),
+			Name: fmt.Sprintf("euthanaisa_%s_killed", resource.GetName()),
+			Help: fmt.Sprintf("Number of %s %s killed by euthanaisa", resource.GetGroup(), resource.GetName()),
 		})
 		metricErrors := prometheus.NewCounter(prometheus.CounterOpts{
-			Name: fmt.Sprintf("euthanaisa_%s_errors", resource.GetResourceName()),
-			Help: fmt.Sprintf("Number of errors encountered while processing %s %s", resource.GetGroup(), resource.GetResourceName()),
+			Name: fmt.Sprintf("euthanaisa_%s_errors", resource.GetName()),
+			Help: fmt.Sprintf("Number of errors encountered while processing %s %s", resource.GetGroup(), resource.GetName()),
 		})
 
-		handlers[resource.GetResourceName()] = resourceHandler{
+		handlers[resource.GetName()] = resourceHandler{
 			client:       dyn.Resource(gvr),
 			metricKilled: metricKilled,
 			metricError:  metricErrors,
 			resource:     resource,
 		}
 		registry.MustRegister(metricKilled, metricErrors)
-		log.WithField("resource", resource.GetResourceName()).Infof("registered resource handler for %s/%s", resource.GetGroup(), resource.GetResourceName())
+		log.WithField("resource", resource.GetName()).Infof("registered resource handler for %s/%s", resource.GetGroup(), resource.GetName())
 	}
 	return handlers, nil
 }
