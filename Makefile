@@ -11,7 +11,7 @@ test-coverage:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
 
-check: fmt vulncheck deadcode gosec staticcheck goimport
+check: fmt vulncheck deadcode gosec staticcheck goimport helm-lint
 
 goimport:
 	@echo "Running goimport..."
@@ -36,6 +36,12 @@ deadcode:
 gosec:
 	@echo "Running gosec..."
 	go run github.com/securego/gosec/v2/cmd/gosec@latest --exclude G404,G101,G115,G402 --exclude-generated -terse ./...
+
+helm-lint:
+	@echo "Running helm lint..."
+	helm lint --strict ./charts
+
+generate: generate-mocks
 
 generate-mocks:
 	find internal -type f -name "mock_*.go" -delete
