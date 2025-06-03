@@ -15,7 +15,7 @@ rules:
     resources: ["applications", "naisjobs"]
     verbs: ["delete"]
   - apiGroups: ["batch"]
-    resources: ["cronjobs"]
+    resources: ["cronjobs", "jobs"]
     verbs: ["list", "delete"]
 ---
 kind: ClusterRoleBinding

@@ -10,6 +10,12 @@
   version: v1
   ownedBy:
     - Naisjob
+- resource: jobs
+  name: Job
+  group: batch
+  version: v1
+  ownedBy:
+    - Naisjob
 - resource: applications
   name: Application
   group: nais.io

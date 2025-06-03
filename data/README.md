@@ -13,5 +13,5 @@ project.
 
 ## Kubernetes yaml files
 
-A sample of a `Application` resource and a `NaisJob` resource is provided. You can use these as a starting point for
+A sample of a `Application` resource and `NaisJob` resource is provided. You can use these as a starting point for
 your local development.
