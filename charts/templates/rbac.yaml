@@ -13,7 +13,7 @@ rules:
     verbs: ["list", "delete"]
   - apiGroups: ["nais.io"]
     resources: ["applications", "naisjobs"]
-    verbs: ["list", "delete"]
+    verbs: ["delete"]
   - apiGroups: ["batch"]
     resources: ["cronjobs"]
     verbs: ["list", "delete"]

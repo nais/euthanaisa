@@ -131,6 +131,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
 				})
 
+				mockRC.On("IsOwned").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("Delete", mock.Anything, "ns", "expired").Return(nil)
 				mockRC.On("IncKilledMetric").Return()
@@ -148,6 +149,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(1 * time.Hour).Format(time.RFC3339),
 				})
 
+				mockRC.On("IsOwned").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 			},
 			expectedDelete: false,
@@ -162,6 +164,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: "invalid-time-format",
 				})
 
+				mockRC.On("IsOwned").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("IncErrorMetric").Return()
@@ -171,6 +174,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 		{
 			name: "should handle list error gracefully",
 			setupMocks: func(mockRC *client.MockResourceClient) {
+				mockRC.On("IsOwned").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return(nil, fmt.Errorf("list failed"))
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("IncErrorMetric").Return()
@@ -235,7 +239,8 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			ownerHandler := client.NewMockResourceClient(t)
 			resourceHandler := client.NewMockResourceClient(t)
 
-			ownerHandler.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{}, nil)
+			ownerHandler.On("IsOwned").Return(false)
+			resourceHandler.On("IsOwned").Return(true)
 			resourceHandler.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{resource}, nil)
 
 			if tt.expectOwnerHandler {

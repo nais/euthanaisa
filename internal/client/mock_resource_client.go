@@ -224,6 +224,51 @@ func (_c *MockResourceClient_IncKilledMetric_Call) RunAndReturn(run func()) *Moc
 	return _c
 }
 
+// IsOwned provides a mock function with no fields
+func (_m *MockResourceClient) IsOwned() bool {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsOwned")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// MockResourceClient_IsOwned_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsOwned'
+type MockResourceClient_IsOwned_Call struct {
+	*mock.Call
+}
+
+// IsOwned is a helper method to define mock.On call
+func (_e *MockResourceClient_Expecter) IsOwned() *MockResourceClient_IsOwned_Call {
+	return &MockResourceClient_IsOwned_Call{Call: _e.mock.On("IsOwned")}
+}
+
+func (_c *MockResourceClient_IsOwned_Call) Run(run func()) *MockResourceClient_IsOwned_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockResourceClient_IsOwned_Call) Return(_a0 bool) *MockResourceClient_IsOwned_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockResourceClient_IsOwned_Call) RunAndReturn(run func() bool) *MockResourceClient_IsOwned_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx, namespace
 func (_m *MockResourceClient) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
 	ret := _m.Called(ctx, namespace)

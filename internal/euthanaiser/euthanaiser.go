@@ -45,6 +45,10 @@ func (e *euthanaiser) Run(ctx context.Context) {
 	defer e.pushMetrics(ctx)
 
 	for _, rc := range e.resourceClients {
+		// Check if the resource client is owned by another resource
+		if !rc.IsOwned() {
+			continue
+		}
 		e.listAndProcessResources(ctx, rc)
 	}
 
