@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -10,8 +11,10 @@ import (
 	"github.com/nais/euthanaisa/internal/config"
 	"github.com/nais/euthanaisa/internal/euthanaiser"
 	"github.com/nais/euthanaisa/internal/logger"
+	"github.com/nais/euthanaisa/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -49,20 +52,22 @@ func main() {
 		os.Exit(exitCodeRunError)
 	}
 
+	dynClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		log.Fatalf("failed to create dynamic client: %v", err)
+	}
+
 	registry := prometheus.NewRegistry()
+	pusher := metrics.Register(cfg.PushgatewayURL, registry)
 
-	clients, err := client.LoadResourceClients(cfg.Resources, kubeConfig, registry, appLog.WithField("sub-system", "resource-client"))
+	factory := client.NewFactory(dynClient, registry, appLog.WithField("system", "client-factory"))
+	clients, err := factory.BuildClients(cfg.Resources)
 	if err != nil {
-		appLog.WithError(err).Errorf("error when loading resource clients")
+		appLog.WithError(err).Errorf("error when building resource clients")
 		os.Exit(exitCodeRunError)
 	}
 
-	e, err := euthanaiser.New(cfg, clients, registry, appLog.WithField("system", "euthanaisa"))
-	if err != nil {
-		appLog.WithError(err).Errorf("error when initializing euthanaisa")
-		os.Exit(exitCodeRunError)
-	}
-
+	e := euthanaiser.New(clients, pusher, appLog.WithField("system", "euthanaisa"))
 	e.Run(ctx)
 	os.Exit(exitCodeSuccess)
 }

@@ -150,6 +150,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 				})
 
 				mockRC.On("ShouldProcess").Return(true)
+				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 			},
 			expectedDelete: false,
@@ -241,6 +242,8 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 
 			ownerHandler.On("ShouldProcess").Return(false)
 			resourceHandler.On("ShouldProcess").Return(true)
+			resourceHandler.On("GetResourceName").Return("resource1")
+
 			resourceHandler.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{resource}, nil)
 
 			if tt.expectOwnerHandler {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/nais/euthanaisa/internal/client"
-	"github.com/nais/euthanaisa/internal/config"
+	"github.com/nais/euthanaisa/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// KillAfterAnnotation Annotation used to specify when a resource should be deleted by euthanaisa.
+	// KillAfterAnnotation is the key used to mark when a resource should be deleted by euthanaisa.
 	KillAfterAnnotation = "euthanaisa.nais.io/kill-after"
 )
 
@@ -26,19 +26,12 @@ type euthanaiser struct {
 	log             logrus.FieldLogger
 }
 
-func New(cfg *config.Config, resourceClients []client.ResourceClient, registry *prometheus.Registry, log logrus.FieldLogger) (*euthanaiser, error) {
-	var pusher *push.Pusher
-	if cfg.PushgatewayURL != "" {
-		pusher = push.New(cfg.PushgatewayURL, "euthanaisa").Gatherer(registry)
-	} else {
-		log.Infof("pushgateway URL not set; metrics will not be pushed")
-	}
-
+func New(resourceClients []client.ResourceClient, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
 	return &euthanaiser{
 		resourceClients: resourceClients,
 		pusher:          pusher,
 		log:             log,
-	}, nil
+	}
 }
 
 func (e *euthanaiser) Run(ctx context.Context) {
@@ -63,6 +56,8 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 		return
 	}
 
+	metrics.ResourcesScannedTotal.WithLabelValues(rc.GetResourceName()).Add(float64(len(list)))
+
 	for _, item := range list {
 		handler := e.getResourceHandlerForOwnedResource(item, rc)
 		if err := e.process(ctx, handler, item); err != nil {
@@ -72,15 +67,15 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 	}
 }
 
-func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unstructured, resourceClient client.ResourceClient) client.ResourceClient {
+func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unstructured, defaultRC client.ResourceClient) client.ResourceClient {
 	for _, owner := range item.GetOwnerReferences() {
 		for _, handler := range e.resourceClients {
 			if handler.GetResourceKind() == owner.Kind {
-				return handler // Return the handler for the resource that owns this item
+				return handler
 			}
 		}
 	}
-	return resourceClient
+	return defaultRC
 }
 
 func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *unstructured.Unstructured) error {
@@ -91,6 +86,11 @@ func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *
 	if !shouldKill {
 		return nil
 	}
+
+	metrics.ResourcesKillableTotal.WithLabelValues(rc.GetResourceName(), u.GetNamespace()).Inc()
+
+	timer := prometheus.NewTimer(metrics.ResourceDeleteDuration.WithLabelValues(rc.GetResourceName()))
+	defer timer.ObserveDuration()
 
 	err = rc.Delete(ctx, u.GetNamespace(), u.GetName())
 	if err != nil {
@@ -140,6 +140,6 @@ func (e *euthanaiser) pushMetrics(ctx context.Context) {
 	if err := e.pusher.AddContext(ctx); err != nil {
 		e.log.WithError(err).Error("pushing metrics")
 	} else {
-		e.log.Info("pushed metrics to prometheus")
+		e.log.Info("pushed metrics to Pushgateway")
 	}
 }
