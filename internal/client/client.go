@@ -19,7 +19,7 @@ type ResourceClient interface {
 	Delete(ctx context.Context, namespace, name string) error
 	GetResourceName() string
 	GetResourceKind() string
-	IsOwned() bool
+	ShouldProcess() bool
 	IncKilledMetric()
 	IncErrorMetric()
 }
@@ -56,7 +56,7 @@ func (r *resourceHandler) GetResourceKind() string {
 	return r.resource.Name
 }
 
-func (r *resourceHandler) IsOwned() bool {
+func (r *resourceHandler) ShouldProcess() bool {
 	return len(r.resource.OwnedBy) > 0
 }
 
