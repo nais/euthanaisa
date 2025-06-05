@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/push"
 )
 
@@ -26,7 +27,7 @@ var (
 	ResourcesKillableTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "euthanaisa_resources_killable_total",
-			Help: "Total number of resources that were marked killable via kill-after annotation",
+			Help: "Total number of resources that are killable by euthanaisa",
 		},
 		[]string{"resource", "namespace"},
 	)
@@ -55,6 +56,8 @@ func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher
 		ResourcesKillableTotal,
 		ResourceKilled,
 		ResourceErrors,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
 	var pusher *push.Pusher

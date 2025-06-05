@@ -44,7 +44,7 @@ func main() {
 
 	appLog := setupLogger(l, cfg.LogFormat, cfg.LogLevel)
 
-	appLog.Infof("Starting euthanaisa with log level %s", cfg.LogLevel)
+	appLog.WithField("system", "main").Infof("Starting euthanaisa with log level %s and format %s", cfg.LogLevel, cfg.LogFormat)
 
 	kubeConfig, err := kubeconfig()
 	if err != nil {

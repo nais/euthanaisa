@@ -1,9 +1,8 @@
 docker-up:
 	docker compose up -d
+
 local: docker-up
-	PUSHGATEWAY_URL=http://localhost:9091 \
-    LOG_LEVEL=debug \
-    go run cmd/euthanaisa/main.go
+	go run cmd/euthanaisa/main.go
 
 linux-binary:
 	GOOS=linux GOARCH=amd64 go build -o bin/euthanaisa cmd/euthanaisa/main.go

@@ -45,7 +45,7 @@ func (e *euthanaiser) Run(ctx context.Context) {
 		e.listAndProcessResources(ctx, rc)
 	}
 
-	e.log.Info("finished processing all configured resources")
+	e.log.Info("finished scanning and processing all configured resources")
 }
 
 func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.ResourceClient) {
@@ -79,15 +79,13 @@ func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unst
 }
 
 func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *unstructured.Unstructured) error {
-	shouldKill, err := shouldBeKilled(u)
+	shouldKill, err := shouldBeKilled(u, rc.GetResourceName())
 	if err != nil {
 		return fmt.Errorf("checking if resource should be killed: %w", err)
 	}
 	if !shouldKill {
 		return nil
 	}
-
-	metrics.ResourcesKillableTotal.WithLabelValues(rc.GetResourceName(), u.GetNamespace()).Inc()
 
 	timer := prometheus.NewTimer(metrics.ResourceDeleteDuration.WithLabelValues(rc.GetResourceName()))
 	defer timer.ObserveDuration()
@@ -114,7 +112,7 @@ func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *
 	return nil
 }
 
-func shouldBeKilled(u *unstructured.Unstructured) (bool, error) {
+func shouldBeKilled(u *unstructured.Unstructured, rCResourceName string) (bool, error) {
 	if u.GetDeletionTimestamp() != nil {
 		return false, nil // already deleting
 	}
@@ -123,6 +121,8 @@ func shouldBeKilled(u *unstructured.Unstructured) (bool, error) {
 	if killAfterStr == "" {
 		return false, nil // no annotation
 	}
+
+	metrics.ResourcesKillableTotal.WithLabelValues(rCResourceName, u.GetNamespace()).Inc()
 
 	killAfter, err := time.Parse(time.RFC3339, killAfterStr)
 	if err != nil {
