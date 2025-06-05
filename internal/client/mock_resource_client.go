@@ -70,6 +70,51 @@ func (_c *MockResourceClient_Delete_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// GetResourceGroup provides a mock function with no fields
+func (_m *MockResourceClient) GetResourceGroup() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetResourceGroup")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// MockResourceClient_GetResourceGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetResourceGroup'
+type MockResourceClient_GetResourceGroup_Call struct {
+	*mock.Call
+}
+
+// GetResourceGroup is a helper method to define mock.On call
+func (_e *MockResourceClient_Expecter) GetResourceGroup() *MockResourceClient_GetResourceGroup_Call {
+	return &MockResourceClient_GetResourceGroup_Call{Call: _e.mock.On("GetResourceGroup")}
+}
+
+func (_c *MockResourceClient_GetResourceGroup_Call) Run(run func()) *MockResourceClient_GetResourceGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockResourceClient_GetResourceGroup_Call) Return(_a0 string) *MockResourceClient_GetResourceGroup_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockResourceClient_GetResourceGroup_Call) RunAndReturn(run func() string) *MockResourceClient_GetResourceGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetResourceKind provides a mock function with no fields
 func (_m *MockResourceClient) GetResourceKind() string {
 	ret := _m.Called()
@@ -157,70 +202,6 @@ func (_c *MockResourceClient_GetResourceName_Call) Return(_a0 string) *MockResou
 
 func (_c *MockResourceClient_GetResourceName_Call) RunAndReturn(run func() string) *MockResourceClient_GetResourceName_Call {
 	_c.Call.Return(run)
-	return _c
-}
-
-// IncErrorMetric provides a mock function with no fields
-func (_m *MockResourceClient) IncErrorMetric() {
-	_m.Called()
-}
-
-// MockResourceClient_IncErrorMetric_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncErrorMetric'
-type MockResourceClient_IncErrorMetric_Call struct {
-	*mock.Call
-}
-
-// IncErrorMetric is a helper method to define mock.On call
-func (_e *MockResourceClient_Expecter) IncErrorMetric() *MockResourceClient_IncErrorMetric_Call {
-	return &MockResourceClient_IncErrorMetric_Call{Call: _e.mock.On("IncErrorMetric")}
-}
-
-func (_c *MockResourceClient_IncErrorMetric_Call) Run(run func()) *MockResourceClient_IncErrorMetric_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockResourceClient_IncErrorMetric_Call) Return() *MockResourceClient_IncErrorMetric_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockResourceClient_IncErrorMetric_Call) RunAndReturn(run func()) *MockResourceClient_IncErrorMetric_Call {
-	_c.Run(run)
-	return _c
-}
-
-// IncKilledMetric provides a mock function with no fields
-func (_m *MockResourceClient) IncKilledMetric() {
-	_m.Called()
-}
-
-// MockResourceClient_IncKilledMetric_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncKilledMetric'
-type MockResourceClient_IncKilledMetric_Call struct {
-	*mock.Call
-}
-
-// IncKilledMetric is a helper method to define mock.On call
-func (_e *MockResourceClient_Expecter) IncKilledMetric() *MockResourceClient_IncKilledMetric_Call {
-	return &MockResourceClient_IncKilledMetric_Call{Call: _e.mock.On("IncKilledMetric")}
-}
-
-func (_c *MockResourceClient_IncKilledMetric_Call) Run(run func()) *MockResourceClient_IncKilledMetric_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockResourceClient_IncKilledMetric_Call) Return() *MockResourceClient_IncKilledMetric_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockResourceClient_IncKilledMetric_Call) RunAndReturn(run func()) *MockResourceClient_IncKilledMetric_Call {
-	_c.Run(run)
 	return _c
 }
 

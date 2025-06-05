@@ -21,7 +21,7 @@ type Config struct {
 type ResourceConfig struct {
 	Group    string   `yaml:"group"`
 	Version  string   `yaml:"version"`
-	Name     string   `yaml:"name"`
+	Kind     string   `yaml:"kind"`
 	Resource string   `yaml:"resource"`
 	OwnedBy  []string `yaml:"ownedBy"`
 }

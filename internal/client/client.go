@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/nais/euthanaisa/internal/config"
-	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -15,17 +14,13 @@ type ResourceClient interface {
 	Delete(ctx context.Context, namespace, name string) error
 	GetResourceName() string
 	GetResourceKind() string
+	GetResourceGroup() string
 	ShouldProcess() bool
-	IncKilledMetric()
-	IncErrorMetric()
 }
 
 type resourceHandler struct {
 	client   dynamic.NamespaceableResourceInterface
 	resource config.ResourceConfig
-
-	metricKilled prometheus.Counter
-	metricError  prometheus.Counter
 }
 
 func (r *resourceHandler) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
@@ -49,17 +44,13 @@ func (r *resourceHandler) GetResourceName() string {
 }
 
 func (r *resourceHandler) GetResourceKind() string {
-	return r.resource.Name
+	return r.resource.Kind
 }
 
 func (r *resourceHandler) ShouldProcess() bool {
 	return len(r.resource.OwnedBy) > 0
 }
 
-func (r *resourceHandler) IncKilledMetric() {
-	r.metricKilled.Inc()
-}
-
-func (r *resourceHandler) IncErrorMetric() {
-	r.metricError.Inc()
+func (r *resourceHandler) GetResourceGroup() string {
+	return r.resource.Group
 }

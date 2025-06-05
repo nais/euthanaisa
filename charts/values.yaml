@@ -13,29 +13,29 @@ alerts: true
 logLevel: debug
 
 resources:
-  - resource: deployments
-    name: Deployment
+  - kind: Deployment
+    resource: deployments
     group: apps
     version: v1
     ownedBy:
       - Application
-  - resource: cronjobs
-    name: CronJob
+  - kind: CronJob
+    resource: cronjobs
     group: batch
     version: v1
     ownedBy:
       - Naisjob
-  - resource: jobs
-    name: Job
+  - kind: Job
+    resource: jobs
     group: batch
     version: v1
     ownedBy:
       - Naisjob
-  - resource: applications
-    name: Application
+  - kind: Application
+    resource: applications
     group: nais.io
     version: v1alpha1
-  - resource: naisjobs
-    name: Naisjob
+  - kind: Naisjob
+    resource: naisjobs
     group: nais.io
     version: v1

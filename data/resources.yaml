@@ -1,26 +1,26 @@
 - resource: deployments
-  name: Deployment
+  kind: Deployment
   group: apps
   version: v1
   ownedBy:
     - Application
 - resource: cronjobs
-  name: CronJob
+  kind: CronJob
   group: batch
   version: v1
   ownedBy:
     - Naisjob
 - resource: jobs
-  name: Job
+  kind: Job
   group: batch
   version: v1
   ownedBy:
     - Naisjob
 - resource: applications
-  name: Application
+  kind: Application
   group: nais.io
   version: v1alpha1
 - resource: naisjobs
-  name: Naisjob
+  kind: Naisjob
   group: nais.io
   version: v1

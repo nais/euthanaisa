@@ -72,14 +72,11 @@ func TestEuthanaiser_ProcessResource(t *testing.T) {
 			mockRC := client.NewMockResourceClient(t)
 			if tc.expectDelete {
 				mockRC.On("GetResourceName").Return("applications")
-			}
-
-			if tc.expectDelete {
 				mockRC.On("Delete", mock.Anything, "ns", "name").Return(tc.deleteErr)
 			}
 
 			if tc.expectKilled {
-				mockRC.On("IncKilledMetric").Return()
+				mockRC.On("GetResourceGroup").Return("apps")
 			}
 
 			e := &euthanaiser{log: logrus.New()}
@@ -101,15 +98,10 @@ func TestEuthanaiser_ProcessResource(t *testing.T) {
 			}
 
 			if tc.expectDelete {
+				mockRC.AssertCalled(t, "GetResourceName")
 				mockRC.AssertCalled(t, "Delete", mock.Anything, "ns", "name")
 			} else {
 				mockRC.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-			}
-
-			if tc.expectKilled {
-				mockRC.AssertCalled(t, "IncKilledMetric")
-			} else {
-				mockRC.AssertNotCalled(t, "IncKilledMetric")
 			}
 		})
 	}
@@ -134,8 +126,8 @@ func TestEuthanaiser_Run(t *testing.T) {
 				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("Delete", mock.Anything, "ns", "expired").Return(nil)
-				mockRC.On("IncKilledMetric").Return()
 				mockRC.On("GetResourceName").Return("applications")
+				mockRC.On("GetResourceGroup").Return("apps")
 			},
 			expectedDelete: true,
 		},
@@ -168,7 +160,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("IncErrorMetric").Return()
+				mockRC.On("GetResourceGroup").Return("apps")
 			},
 			expectedDelete: false,
 		},
@@ -178,7 +170,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return(nil, fmt.Errorf("list failed"))
 				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("IncErrorMetric").Return()
+				mockRC.On("GetResourceGroup").Return("apps")
 			},
 			expectedDelete: false,
 		},
@@ -242,19 +234,17 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 
 			ownerHandler.On("ShouldProcess").Return(false)
 			resourceHandler.On("ShouldProcess").Return(true)
-			resourceHandler.On("GetResourceName").Return("resource1")
-
+			resourceHandler.On("GetResourceName").Return("resource")
 			resourceHandler.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{resource}, nil)
 
 			if tt.expectOwnerHandler {
 				ownerHandler.On("GetResourceKind").Return("OwnerKind")
 				ownerHandler.On("GetResourceName").Return("owner")
+				ownerHandler.On("GetResourceGroup").Return("apps")
 				ownerHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
-				ownerHandler.On("IncKilledMetric").Return()
 			} else {
-				resourceHandler.On("GetResourceName").Return("resource")
+				resourceHandler.On("GetResourceGroup").Return("apps")
 				resourceHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
-				resourceHandler.On("IncKilledMetric").Return()
 			}
 
 			e := &euthanaiser{

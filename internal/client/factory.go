@@ -2,24 +2,22 @@ package client
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/nais/euthanaisa/internal/config"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/dynamic"
 )
 
 type Factory struct {
-	dyn      dynamic.Interface
-	registry *prometheus.Registry
-	log      logrus.FieldLogger
+	dyn dynamic.Interface
+	log logrus.FieldLogger
 }
 
-func NewFactory(dyn dynamic.Interface, registry *prometheus.Registry, log logrus.FieldLogger) *Factory {
+func NewFactory(dyn dynamic.Interface, log logrus.FieldLogger) *Factory {
 	return &Factory{
-		dyn:      dyn,
-		registry: registry,
-		log:      log,
+		dyn: dyn,
+		log: log,
 	}
 }
 
@@ -27,7 +25,7 @@ func (f *Factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 	var handlers []ResourceClient
 
 	for _, r := range resourceConfigs {
-		handler, err := NewResourceHandler(f.dyn, r, f.registry)
+		handler, err := newResourceHandler(f.dyn, r)
 		if err != nil {
 			return nil, fmt.Errorf("building resource handler for %s: %w", r.Resource, err)
 		}
@@ -36,4 +34,12 @@ func (f *Factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 	}
 
 	return handlers, nil
+}
+
+func newResourceHandler(dyn dynamic.Interface, cfg config.ResourceConfig) (ResourceClient, error) {
+	gvr := schema.GroupVersionResource{Group: cfg.Group, Version: cfg.Version, Resource: cfg.Resource}
+	return &resourceHandler{
+		client:   dyn.Resource(gvr),
+		resource: cfg,
+	}, nil
 }

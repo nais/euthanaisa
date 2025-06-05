@@ -60,7 +60,7 @@ func main() {
 	registry := prometheus.NewRegistry()
 	pusher := metrics.Register(cfg.PushgatewayURL, registry)
 
-	factory := client.NewFactory(dynClient, registry, appLog.WithField("system", "client-factory"))
+	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
 	clients, err := factory.BuildClients(cfg.Resources)
 	if err != nil {
 		appLog.WithError(err).Errorf("error when building resource clients")

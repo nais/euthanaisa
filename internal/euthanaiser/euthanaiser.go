@@ -52,7 +52,7 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 	list, err := rc.List(ctx, metav1.NamespaceAll)
 	if err != nil {
 		e.log.WithError(err).WithField("resource", rc.GetResourceName()).Error("listing resources")
-		rc.IncErrorMetric()
+		metrics.ResourceErrors.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
 		return
 	}
 
@@ -62,7 +62,7 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 		handler := e.getResourceHandlerForOwnedResource(item, rc)
 		if err := e.process(ctx, handler, item); err != nil {
 			e.log.WithError(err).WithField("resource", handler.GetResourceName()).Error("processing resource")
-			rc.IncErrorMetric()
+			metrics.ResourceErrors.WithLabelValues(handler.GetResourceGroup(), handler.GetResourceName()).Inc()
 		}
 	}
 }
@@ -107,9 +107,10 @@ func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *
 	e.log.WithFields(logrus.Fields{
 		"namespace": u.GetNamespace(),
 		"name":      u.GetName(),
-		"resource":  rc.GetResourceName(),
+		"resource":  u.GetKind(),
+		"owned-by":  rc.GetResourceKind(),
 	}).Debugf("deleted resource")
-	rc.IncKilledMetric()
+	metrics.ResourceKilled.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
 	return nil
 }
 
