@@ -17,11 +17,13 @@ spec:
             - name: "{{ .Chart.Name }}"
               env:
               {{- if .Values.pushgatewayURL }}
-                - name: "PUSHGATEWAY_URL"
+                - name: PUSHGATEWAY_URL
                   value: "{{ .Values.pushgatewayURL }}"
               {{- end }}
               - name: LOG_LEVEL
                 value: "{{ .Values.logLevel }}"
+              - name: LOG_FORMAT
+                value: "{{ .Values.logFormat }}"
               securityContext:
                 capabilities:
                   drop:

@@ -29,7 +29,11 @@ func (f *Factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 		if err != nil {
 			return nil, fmt.Errorf("building resource handler for %s: %w", r.Resource, err)
 		}
-		f.log.WithField("resource", r.Resource).Infof("registered client for %s/%s", r.Group, r.Resource)
+		f.log.WithFields(logrus.Fields{
+			"resource": r.Resource,
+			"group":    r.Group,
+			"version":  r.Version,
+		}).Info("created resource handler")
 		handlers = append(handlers, handler)
 	}
 
