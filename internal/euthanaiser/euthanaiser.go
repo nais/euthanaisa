@@ -21,27 +21,25 @@ const (
 )
 
 type euthanaiser struct {
-	resourceClients []client.ResourceClient
-	pusher          *push.Pusher
-	log             logrus.FieldLogger
+	ownerClients           []client.ResourceClient
+	resourceHandlersByKind client.HandlerByKind
+	pusher                 *push.Pusher
+	log                    logrus.FieldLogger
 }
 
-func New(resourceClients []client.ResourceClient, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
+func New(ownerClients []client.ResourceClient, resourceHandlersByKind client.HandlerByKind, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
 	return &euthanaiser{
-		resourceClients: resourceClients,
-		pusher:          pusher,
-		log:             log,
+		ownerClients:           ownerClients,
+		resourceHandlersByKind: resourceHandlersByKind,
+		pusher:                 pusher,
+		log:                    log,
 	}
 }
 
 func (e *euthanaiser) Run(ctx context.Context) {
 	defer e.pushMetrics(ctx)
 
-	for _, rc := range e.resourceClients {
-		// Check if the resource client is owned by another resource
-		if !rc.ShouldProcess() {
-			continue
-		}
+	for _, rc := range e.ownerClients {
 		e.listAndProcessResources(ctx, rc)
 	}
 
@@ -69,10 +67,8 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 
 func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unstructured, defaultRC client.ResourceClient) client.ResourceClient {
 	for _, owner := range item.GetOwnerReferences() {
-		for _, handler := range e.resourceClients {
-			if handler.GetResourceKind() == owner.Kind {
-				return handler
-			}
+		if handler, ok := e.resourceHandlersByKind.Get(owner.Kind); ok {
+			return handler
 		}
 	}
 	return defaultRC

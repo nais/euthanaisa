@@ -70,12 +70,14 @@ func TestEuthanaiser_ProcessResource(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockRC := client.NewMockResourceClient(t)
+			mockRC.On("GetResourceName").Return("applications")
 			if tc.expectDelete {
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("Delete", mock.Anything, "ns", "name").Return(tc.deleteErr)
 			}
 
 			if tc.expectKilled {
+				mockRC.On("GetResourceKind").Return("Deployment")
 				mockRC.On("GetResourceGroup").Return("apps")
 			}
 
@@ -123,7 +125,7 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
 				})
 
-				mockRC.On("ShouldProcess").Return(true)
+				mockRC.On("GetResourceKind").Return("Deployment")
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("Delete", mock.Anything, "ns", "expired").Return(nil)
 				mockRC.On("GetResourceName").Return("applications")
@@ -141,7 +143,6 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(1 * time.Hour).Format(time.RFC3339),
 				})
 
-				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 			},
@@ -157,7 +158,6 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: "invalid-time-format",
 				})
 
-				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("GetResourceGroup").Return("apps")
@@ -167,7 +167,6 @@ func TestEuthanaiser_Run(t *testing.T) {
 		{
 			name: "should handle list error gracefully",
 			setupMocks: func(mockRC *client.MockResourceClient) {
-				mockRC.On("ShouldProcess").Return(true)
 				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return(nil, fmt.Errorf("list failed"))
 				mockRC.On("GetResourceName").Return("applications")
 				mockRC.On("GetResourceGroup").Return("apps")
@@ -182,8 +181,8 @@ func TestEuthanaiser_Run(t *testing.T) {
 			tt.setupMocks(mockRC)
 
 			e := &euthanaiser{
-				log:             logrus.New(),
-				resourceClients: []client.ResourceClient{mockRC},
+				log:          logrus.New(),
+				ownerClients: []client.ResourceClient{mockRC},
 			}
 
 			e.Run(context.Background())
@@ -232,26 +231,27 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			ownerHandler := client.NewMockResourceClient(t)
 			resourceHandler := client.NewMockResourceClient(t)
 
-			ownerHandler.On("ShouldProcess").Return(false)
-			resourceHandler.On("ShouldProcess").Return(true)
-			resourceHandler.On("GetResourceName").Return("resource")
 			resourceHandler.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{resource}, nil)
+			resourceHandler.On("GetResourceName").Return("resource1")
 
 			if tt.expectOwnerHandler {
-				ownerHandler.On("GetResourceKind").Return("OwnerKind")
 				ownerHandler.On("GetResourceName").Return("owner")
+				ownerHandler.On("GetResourceKind").Return("OwnerKind")
 				ownerHandler.On("GetResourceGroup").Return("apps")
 				ownerHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
 			} else {
+				resourceHandler.On("GetResourceKind").Return("ResourceKind")
 				resourceHandler.On("GetResourceGroup").Return("apps")
 				resourceHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
 			}
 
 			e := &euthanaiser{
 				log: logrus.New(),
-				resourceClients: []client.ResourceClient{
-					ownerHandler,
+				ownerClients: []client.ResourceClient{
 					resourceHandler,
+				},
+				resourceHandlersByKind: client.HandlerByKind{
+					"OwnerKind": ownerHandler,
 				},
 			}
 

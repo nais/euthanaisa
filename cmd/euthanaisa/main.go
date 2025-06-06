@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -54,20 +53,21 @@ func main() {
 
 	dynClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Fatalf("failed to create dynamic client: %v", err)
+		appLog.WithError(err).Errorf("error when creating dynamic client")
+		os.Exit(exitCodeRunError)
 	}
 
 	registry := prometheus.NewRegistry()
 	pusher := metrics.Register(cfg.PushgatewayURL, registry)
 
 	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
-	clients, err := factory.BuildClients(cfg.Resources)
+	ownerClients, handlerByKind, err := factory.BuildClients(cfg.Resources)
 	if err != nil {
 		appLog.WithError(err).Errorf("error when building resource clients")
 		os.Exit(exitCodeRunError)
 	}
 
-	e := euthanaiser.New(clients, pusher, appLog.WithField("system", "euthanaisa"))
+	e := euthanaiser.New(ownerClients, handlerByKind, pusher, appLog.WithField("system", "euthanaisa"))
 	e.Run(ctx)
 	os.Exit(exitCodeSuccess)
 }

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -38,21 +37,24 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to process environment variables: %w", err)
 	}
 
-	cfg.loadResources()
+	if err = cfg.loadResources(); err != nil {
+		return nil, fmt.Errorf("failed to load resources: %w", err)
+	}
 
 	return cfg, nil
 }
 
-func (c *Config) loadResources() {
+func (c *Config) loadResources() error {
 	b, err := os.ReadFile(c.ResourcesFile)
 	if err != nil {
-		log.Fatalf("failed to read resources file %s: %v", c.ResourcesFile, err)
+		return fmt.Errorf("failed to read resources file %s: %w", c.ResourcesFile, err)
 	}
 	var configs []ResourceConfig
-	if err := yaml.Unmarshal(b, &configs); err != nil {
-		log.Fatalf("failed to unmarshal resources file %s: %v", c.ResourcesFile, err)
+	if err = yaml.Unmarshal(b, &configs); err != nil {
+		return fmt.Errorf("failed to unmarshal resources from file %s: %w", c.ResourcesFile, err)
 	}
 
 	c.Resources = make([]ResourceConfig, len(configs))
 	copy(c.Resources, configs)
+	return nil
 }
