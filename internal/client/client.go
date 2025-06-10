@@ -18,12 +18,12 @@ type ResourceClient interface {
 	ShouldProcess() bool
 }
 
-type resourceHandler struct {
+type resourceClientImpl struct {
 	client   dynamic.NamespaceableResourceInterface
 	resource config.ResourceConfig
 }
 
-func (r *resourceHandler) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
+func (r *resourceClientImpl) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
 	list, err := r.client.Namespace(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -35,22 +35,22 @@ func (r *resourceHandler) List(ctx context.Context, namespace string) ([]*unstru
 	return result, nil
 }
 
-func (r *resourceHandler) Delete(ctx context.Context, namespace, name string) error {
+func (r *resourceClientImpl) Delete(ctx context.Context, namespace, name string) error {
 	return r.client.Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
-func (r *resourceHandler) GetResourceName() string {
+func (r *resourceClientImpl) GetResourceName() string {
 	return r.resource.Resource
 }
 
-func (r *resourceHandler) GetResourceKind() string {
+func (r *resourceClientImpl) GetResourceKind() string {
 	return r.resource.Kind
 }
 
-func (r *resourceHandler) ShouldProcess() bool {
+func (r *resourceClientImpl) ShouldProcess() bool {
 	return len(r.resource.OwnedBy) > 0
 }
 
-func (r *resourceHandler) GetResourceGroup() string {
+func (r *resourceClientImpl) GetResourceGroup() string {
 	return r.resource.Group
 }

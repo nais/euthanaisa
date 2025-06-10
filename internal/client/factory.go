@@ -61,7 +61,7 @@ func (f *factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 
 func newResourceHandler(dyn dynamic.Interface, cfg config.ResourceConfig) (ResourceClient, error) {
 	gvr := schema.GroupVersionResource{Group: cfg.Group, Version: cfg.Version, Resource: cfg.Resource}
-	return &resourceHandler{
+	return &resourceClientImpl{
 		client:   dyn.Resource(gvr),
 		resource: cfg,
 	}, nil
