@@ -15,7 +15,6 @@ type ResourceClient interface {
 	GetResourceName() string
 	GetResourceKind() string
 	GetResourceGroup() string
-	ShouldProcess() bool
 }
 
 type resourceClientImpl struct {
@@ -45,10 +44,6 @@ func (r *resourceClientImpl) GetResourceName() string {
 
 func (r *resourceClientImpl) GetResourceKind() string {
 	return r.resource.Kind
-}
-
-func (r *resourceClientImpl) ShouldProcess() bool {
-	return len(r.resource.OwnedBy) > 0
 }
 
 func (r *resourceClientImpl) GetResourceGroup() string {

@@ -103,7 +103,7 @@ func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *
 		"name":      u.GetName(),
 		"resource":  u.GetKind(),
 		"owned-by":  rc.GetResourceKind(),
-	}).Debugf("deleted resource")
+	}).Debug("deleted resource")
 	metrics.ResourceKilled.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
 	return nil
 }
