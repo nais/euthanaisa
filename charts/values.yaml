@@ -9,3 +9,34 @@ apiserverIP: ""
 schedule: "*/10 * * * *"
 
 alerts: true
+
+logLevel: debug
+logFormat: json
+
+resources:
+  - kind: Deployment
+    resource: deployments
+    group: apps
+    version: v1
+    ownedBy:
+      - Application
+  - kind: CronJob
+    resource: cronjobs
+    group: batch
+    version: v1
+    ownedBy:
+      - Naisjob
+  - kind: Job
+    resource: jobs
+    group: batch
+    version: v1
+    ownedBy:
+      - Naisjob
+  - kind: Application
+    resource: applications
+    group: nais.io
+    version: v1alpha1
+  - kind: Naisjob
+    resource: naisjobs
+    group: nais.io
+    version: v1

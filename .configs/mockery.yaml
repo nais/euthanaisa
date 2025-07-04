@@ -1,0 +1,9 @@
+with-expecter: true
+disable-version-string: true
+inpackage: true
+dir: "{{.InterfaceDir}}"
+filename: "mock_{{.InterfaceNameSnake}}.go"
+packages:
+  github.com/nais/euthanaisa/internal/client:
+    interfaces:
+      ResourceClient:

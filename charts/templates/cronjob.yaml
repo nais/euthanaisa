@@ -15,11 +15,15 @@ spec:
           serviceAccountName: "{{ .Release.Name }}"
           containers:
             - name: "{{ .Chart.Name }}"
+              env:
               {{- if .Values.pushgatewayURL }}
-              env: 
-                - name: "PUSHGATEWAY_URL"
+                - name: PUSHGATEWAY_URL
                   value: "{{ .Values.pushgatewayURL }}"
-              {{- end }} 
+              {{- end }}
+              - name: LOG_LEVEL
+                value: "{{ .Values.logLevel }}"
+              - name: LOG_FORMAT
+                value: "{{ .Values.logFormat }}"
               securityContext:
                 capabilities:
                   drop:
@@ -38,7 +42,14 @@ spec:
                 requests:
                   cpu: 50m
                   memory: 64Mi
-          serviceAccountName: "{{ .Release.Name }}"
+              volumeMounts:
+                - name: resources
+                  mountPath: /app/config/resources.yaml
+                  subPath: resources.yaml
+          volumes:
+            - name: resources
+              configMap:
+                name: {{ .Release.Name }}-resources
           securityContext:
             runAsUser: 1069
             runAsGroup: 1069

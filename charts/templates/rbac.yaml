@@ -12,8 +12,11 @@ rules:
     resources: ["deployments"]
     verbs: ["list", "delete"]
   - apiGroups: ["nais.io"]
-    resources: ["applications"]
+    resources: ["applications", "naisjobs"]
     verbs: ["delete"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs", "jobs"]
+    verbs: ["list", "delete"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

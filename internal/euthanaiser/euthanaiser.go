@@ -3,155 +3,140 @@ package euthanaiser
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/nais/euthanaisa/internal/client"
+	"github.com/nais/euthanaisa/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
-	log "github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	// KillAfterAnnotation is the key used to mark when a resource should be deleted by euthanaisa.
+	KillAfterAnnotation = "euthanaisa.nais.io/kill-after"
 )
 
 type euthanaiser struct {
-	appClient     dynamic.NamespaceableResourceInterface
-	clientset     *kubernetes.Clientset
-	log           *log.Entry
-	appsKilled    prometheus.Counter
-	deploysKilled prometheus.Counter
-	errors        prometheus.Counter
-	pusher        *push.Pusher
+	ownerClients           []client.ResourceClient
+	resourceHandlersByKind client.HandlerByKind
+	pusher                 *push.Pusher
+	log                    logrus.FieldLogger
 }
 
-func New(logger *log.Entry, pushgatewayURL string) (*euthanaiser, error) {
-	kc, err := kubeconfig()
-	if err != nil {
-		return nil, fmt.Errorf("loading kubeconfig: %w", err)
-	}
-	clientset, err := kubernetes.NewForConfig(kc)
-	if err != nil {
-		return nil, fmt.Errorf("creating kubernetes client: %w", err)
-	}
-	dyn, err := dynamic.NewForConfig(kc)
-	if err != nil {
-		return nil, fmt.Errorf("creating dynamic client: %w", err)
-	}
-
-	registry := prometheus.NewRegistry()
-	appsKilled := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "euthanaisa_apps_killed",
-		Help: "Number of applications killed",
-	})
-	deploysKilled := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "euthanaisa_deploys_killed",
-		Help: "Number of deployments killed",
-	})
-	errors := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "euthanaisa_errors",
-		Help: "Number of errors",
-	})
-
-	registry.MustRegister(appsKilled, deploysKilled, errors)
-	pusher := push.New(pushgatewayURL, "euthanaisa").Gatherer(registry)
-
+func New(ownerClients []client.ResourceClient, resourceHandlersByKind client.HandlerByKind, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
 	return &euthanaiser{
-		log:           logger,
-		clientset:     clientset,
-		appClient:     dyn.Resource(schema.GroupVersionResource{Group: "nais.io", Version: "v1alpha1", Resource: "applications"}),
-		pusher:        pusher,
-		appsKilled:    appsKilled,
-		deploysKilled: deploysKilled,
-		errors:        errors,
-	}, nil
-}
-
-func (e *euthanaiser) pushMetrics(ctx context.Context) {
-	if err := e.pusher.AddContext(ctx); err != nil {
-		e.log.WithError(err).Error("pushing metrics")
+		ownerClients:           ownerClients,
+		resourceHandlersByKind: resourceHandlersByKind,
+		pusher:                 pusher,
+		log:                    log,
 	}
-	e.log.Info("pushed metrics to prometheus")
 }
 
 func (e *euthanaiser) Run(ctx context.Context) {
 	defer e.pushMetrics(ctx)
 
-	deploys, err := e.clientset.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
+	for _, rc := range e.ownerClients {
+		e.listAndProcessResources(ctx, rc)
+	}
+
+	e.log.Info("finished scanning and processing all configured resources")
+}
+
+func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.ResourceClient) {
+	list, err := rc.List(ctx, metav1.NamespaceAll)
 	if err != nil {
-		e.log.WithError(err).Error("listing deployments")
-		e.errors.Inc()
+		e.log.WithError(err).WithField("resource", rc.GetResourceName()).Error("listing resources")
+		metrics.ResourceErrors.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
 		return
 	}
-	for _, deploy := range deploys.Items {
-		if err := e.process(ctx, deploy); err != nil {
-			e.log.WithError(err).Error("processing deployment")
-			e.errors.Inc()
+
+	metrics.ResourcesScannedTotal.WithLabelValues(rc.GetResourceName()).Add(float64(len(list)))
+
+	for _, item := range list {
+		handler := e.getResourceHandlerForOwnedResource(item, rc)
+		if err := e.process(ctx, handler, item); err != nil {
+			e.log.WithError(err).WithField("resource", handler.GetResourceName()).Error("processing resource")
+			metrics.ResourceErrors.WithLabelValues(handler.GetResourceGroup(), handler.GetResourceName()).Inc()
 		}
 	}
-
-	e.log.Info("finished processing all deployments")
 }
 
-func (e *euthanaiser) process(ctx context.Context, obj interface{}) error {
-	deploy := obj.(appsv1.Deployment)
-	if deploy.DeletionTimestamp != nil {
-		return nil // Already being deleted
+func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unstructured, defaultRC client.ResourceClient) client.ResourceClient {
+	for _, owner := range item.GetOwnerReferences() {
+		if handler, ok := e.resourceHandlersByKind.Get(owner.Kind); ok {
+			return handler
+		}
 	}
+	return defaultRC
+}
 
-	if deploy.Annotations["euthanaisa.nais.io/kill-after"] == "" {
-		return nil
-	}
-
-	killAfter, err := time.Parse(time.RFC3339, deploy.Annotations["euthanaisa.nais.io/kill-after"])
+func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *unstructured.Unstructured) error {
+	shouldKill, err := shouldBeKilled(u, rc.GetResourceName())
 	if err != nil {
-		return err
+		return fmt.Errorf("checking if resource should be killed: %w", err)
 	}
-
-	if killAfter.After(time.Now()) {
+	if !shouldKill {
 		return nil
 	}
 
-	appOwnerRef := appOwnerRef(deploy)
-	if appOwnerRef != nil { // We have a application owner reference, deleting this instead
-		err := e.appClient.Namespace(deploy.Namespace).Delete(ctx, appOwnerRef.Name, metav1.DeleteOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return nil // Already deleted
-			}
-			return fmt.Errorf("deleting application: %w", err)
-		}
-		e.appsKilled.Inc()
-		log.Infof("deleted application %s in namespace: %s", appOwnerRef.Name, deploy.Namespace)
-		return nil
-	}
+	timer := prometheus.NewTimer(metrics.ResourceDeleteDuration.WithLabelValues(rc.GetResourceName()))
+	defer timer.ObserveDuration()
 
-	if err := e.clientset.AppsV1().Deployments(deploy.Namespace).Delete(ctx, deploy.Name, metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("deleting deployment: %w", err)
+	err = rc.Delete(ctx, u.GetNamespace(), u.GetName())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			e.log.WithFields(logrus.Fields{
+				"namespace": u.GetNamespace(),
+				"name":      u.GetName(),
+				"resource":  rc.GetResourceName(),
+			}).Debug("resource already deleted")
+			return nil // already deleted
+		}
+		return fmt.Errorf("deleting resource %s/%s: %w", u.GetNamespace(), u.GetName(), err)
 	}
-	e.deploysKilled.Inc()
-	log.Debugf("deleted deployment %s in namespace %s", deploy.Name, deploy.Namespace)
+	e.log.WithFields(logrus.Fields{
+		"namespace": u.GetNamespace(),
+		"name":      u.GetName(),
+		"resource":  u.GetKind(),
+		"owned-by":  rc.GetResourceKind(),
+	}).Debug("deleted resource")
+	metrics.ResourceKilled.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
 	return nil
 }
 
-func kubeconfig() (*rest.Config, error) {
-	if os.Getenv("KUBECONFIG") != "" {
-		return clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+func shouldBeKilled(u *unstructured.Unstructured, rCResourceName string) (bool, error) {
+	if u.GetDeletionTimestamp() != nil {
+		return false, nil // already deleting
 	}
 
-	return rest.InClusterConfig()
+	killAfterStr := u.GetAnnotations()[KillAfterAnnotation]
+	if killAfterStr == "" {
+		return false, nil // no annotation
+	}
+
+	metrics.ResourcesKillableTotal.WithLabelValues(rCResourceName, u.GetNamespace()).Inc()
+
+	killAfter, err := time.Parse(time.RFC3339, killAfterStr)
+	if err != nil {
+		return false, fmt.Errorf("parsing killAfter annotation: %w", err)
+	}
+
+	return killAfter.Before(time.Now()), nil
 }
 
-func appOwnerRef(deploy appsv1.Deployment) *metav1.OwnerReference {
-	for _, ref := range deploy.OwnerReferences {
-		if ref.Kind == "Application" {
-			return &ref
-		}
+func (e *euthanaiser) pushMetrics(ctx context.Context) {
+	if e.pusher == nil {
+		e.log.Debug("metrics pusher disabled; skipping push")
+		return
 	}
 
-	return nil
+	if err := e.pusher.AddContext(ctx); err != nil {
+		e.log.WithError(err).Error("pushing metrics")
+	} else {
+		e.log.Info("pushed metrics to Pushgateway")
+	}
 }
