@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-const LabelSelectorEnabledResources = "euthanaiser.nais.io/enabled=true"
+const LabelSelectorEnabledResources = "euthanaisa.nais.io/enabled=true"
 
 type ResourceClient interface {
 	List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error)
