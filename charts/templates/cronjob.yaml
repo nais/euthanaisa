@@ -20,10 +20,10 @@ spec:
                 - name: PUSHGATEWAY_URL
                   value: "{{ .Values.pushgatewayURL }}"
               {{- end }}
-              - name: LOG_LEVEL
-                value: "{{ .Values.logLevel }}"
-              - name: LOG_FORMAT
-                value: "{{ .Values.logFormat }}"
+                - name: LOG_LEVEL
+                  value: "{{ .Values.logLevel }}"
+                - name: LOG_FORMAT
+                  value: "{{ .Values.logFormat }}"
               securityContext:
                 capabilities:
                   drop:

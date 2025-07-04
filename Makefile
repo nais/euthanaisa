@@ -38,7 +38,7 @@ deadcode:
 
 gosec:
 	@echo "Running gosec..."
-	go run github.com/securego/gosec/v2/cmd/gosec@latest --exclude G404,G101,G115,G402 --exclude-generated -terse ./...
+	go run github.com/securego/gosec/v2/cmd/gosec@latest --exclude-generated -terse ./...
 
 helm-lint:
 	@echo "Running helm lint..."
