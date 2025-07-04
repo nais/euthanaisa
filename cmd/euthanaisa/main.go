@@ -32,7 +32,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		l.WithError(err).Warnf("error when loading .env file, continuing with default environment variables")
+		l.WithError(err).Warnf(".env file not found, continuing with default envs")
 	}
 
 	cfg, err := config.NewConfig()

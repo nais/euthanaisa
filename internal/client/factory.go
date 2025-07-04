@@ -42,7 +42,7 @@ func (f *factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 			"group":    r.Group,
 			"version":  r.Version,
 			"kind":     r.Kind,
-		}).Info("created resource handler")
+		}).Debug("created resource handler")
 
 		if r.Kind != "" {
 			handlerByKind[r.Kind] = handler
