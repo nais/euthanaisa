@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-const LabelSelectorManagedResources = "euthanaiser.nais.io/managed=true"
+const LabelSelectorEnabledResources = "euthanaiser.nais.io/enabled=true"
 
 type ResourceClient interface {
 	List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error)
@@ -26,7 +26,7 @@ type resourceClientImpl struct {
 
 func (r *resourceClientImpl) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
 	list, err := r.client.Namespace(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: LabelSelectorManagedResources,
+		LabelSelector: LabelSelectorEnabledResources,
 	})
 	if err != nil {
 		return nil, err
