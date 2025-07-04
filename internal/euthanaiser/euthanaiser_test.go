@@ -65,6 +65,14 @@ func TestEuthanaiser_ProcessResource(t *testing.T) {
 			deleteErr:    errors.NewNotFound(schema.GroupResource{Group: "apps", Resource: "deployments"}, "name"),
 			expectDelete: true,
 		},
+		{
+			name: "should not delete if there is no kill-after annotation",
+			annotations: map[string]string{
+				"some-other-annotation": "value",
+			},
+			expectDelete: false,
+			expectKilled: false,
+		},
 	}
 
 	for _, tc := range tests {
