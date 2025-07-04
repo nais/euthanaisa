@@ -181,6 +181,21 @@ func TestEuthanaiser_Run(t *testing.T) {
 			},
 			expectedDelete: false,
 		},
+		{
+			name: "should not delete if no kill-after annotation",
+			setupMocks: func(mockRC *client.MockResourceClient) {
+				res := &unstructured.Unstructured{}
+				res.SetNamespace("ns")
+				res.SetName("no-annotation")
+				res.SetAnnotations(map[string]string{
+					"some-other-annotation": "value",
+				})
+
+				mockRC.On("List", mock.Anything, metav1.NamespaceAll).Return([]*unstructured.Unstructured{res}, nil)
+				mockRC.On("GetResourceName").Return("applications")
+			},
+			expectedDelete: false,
+		},
 	}
 
 	for _, tt := range tests {
