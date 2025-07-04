@@ -1,6 +1,6 @@
 module github.com/nais/euthanaisa
 
-go 1.24.2
+go 1.24.4
 
 require (
 	github.com/bombsimon/logrusr/v4 v4.1.0
