@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"os"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/push"
@@ -60,9 +62,15 @@ func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
-	var pusher *push.Pusher
-	if pushGatewayURL != "" {
-		pusher = push.New(pushGatewayURL, "euthanaisa").Gatherer(registry)
+	if pushGatewayURL == "" {
+		return nil
 	}
+
+	pusher := push.New(pushGatewayURL, "euthanaisa").
+		Gatherer(registry).
+		Grouping("namespace", os.Getenv("NAMESPACE")).
+		Grouping("pod", os.Getenv("HOSTNAME")).
+		Grouping("job", os.Getenv("CRONJOB_NAME"))
+
 	return pusher
 }

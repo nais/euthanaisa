@@ -9,10 +9,8 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-const LabelSelectorEnabledResources = "euthanaisa.nais.io/enabled=true"
-
 type ResourceClient interface {
-	List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error)
+	List(ctx context.Context, namespace string, opts ...ListOption) ([]*unstructured.Unstructured, error)
 	Delete(ctx context.Context, namespace, name string) error
 	GetResourceName() string
 	GetResourceKind() string
@@ -24,13 +22,17 @@ type resourceClientImpl struct {
 	resource config.ResourceConfig
 }
 
-func (r *resourceClientImpl) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
-	list, err := r.client.Namespace(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: LabelSelectorEnabledResources,
-	})
+func (r *resourceClientImpl) List(ctx context.Context, namespace string, opts ...ListOption) ([]*unstructured.Unstructured, error) {
+	listOptions := metav1.ListOptions{}
+	for _, opt := range opts {
+		opt(&listOptions)
+	}
+
+	list, err := r.client.Namespace(namespace).List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
+
 	result := make([]*unstructured.Unstructured, 0, len(list.Items))
 	for i := range list.Items {
 		result = append(result, &list.Items[i])
@@ -52,4 +54,12 @@ func (r *resourceClientImpl) GetResourceKind() string {
 
 func (r *resourceClientImpl) GetResourceGroup() string {
 	return r.resource.Group
+}
+
+type ListOption func(*metav1.ListOptions)
+
+func WithLabelSelector(selector string) ListOption {
+	return func(opt *metav1.ListOptions) {
+		opt.LabelSelector = selector
+	}
 }

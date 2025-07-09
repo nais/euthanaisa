@@ -205,9 +205,16 @@ func (_c *MockResourceClient_GetResourceName_Call) RunAndReturn(run func() strin
 	return _c
 }
 
-// List provides a mock function with given fields: ctx, namespace
-func (_m *MockResourceClient) List(ctx context.Context, namespace string) ([]*unstructured.Unstructured, error) {
-	ret := _m.Called(ctx, namespace)
+// List provides a mock function with given fields: ctx, namespace, opts
+func (_m *MockResourceClient) List(ctx context.Context, namespace string, opts ...ListOption) ([]*unstructured.Unstructured, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, namespace)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -215,19 +222,19 @@ func (_m *MockResourceClient) List(ctx context.Context, namespace string) ([]*un
 
 	var r0 []*unstructured.Unstructured
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) ([]*unstructured.Unstructured, error)); ok {
-		return rf(ctx, namespace)
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...ListOption) ([]*unstructured.Unstructured, error)); ok {
+		return rf(ctx, namespace, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) []*unstructured.Unstructured); ok {
-		r0 = rf(ctx, namespace)
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...ListOption) []*unstructured.Unstructured); ok {
+		r0 = rf(ctx, namespace, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*unstructured.Unstructured)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, namespace)
+	if rf, ok := ret.Get(1).(func(context.Context, string, ...ListOption) error); ok {
+		r1 = rf(ctx, namespace, opts...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -243,13 +250,21 @@ type MockResourceClient_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - namespace string
-func (_e *MockResourceClient_Expecter) List(ctx interface{}, namespace interface{}) *MockResourceClient_List_Call {
-	return &MockResourceClient_List_Call{Call: _e.mock.On("List", ctx, namespace)}
+//   - opts ...ListOption
+func (_e *MockResourceClient_Expecter) List(ctx interface{}, namespace interface{}, opts ...interface{}) *MockResourceClient_List_Call {
+	return &MockResourceClient_List_Call{Call: _e.mock.On("List",
+		append([]interface{}{ctx, namespace}, opts...)...)}
 }
 
-func (_c *MockResourceClient_List_Call) Run(run func(ctx context.Context, namespace string)) *MockResourceClient_List_Call {
+func (_c *MockResourceClient_List_Call) Run(run func(ctx context.Context, namespace string, opts ...ListOption)) *MockResourceClient_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		variadicArgs := make([]ListOption, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(ListOption)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
 }
@@ -259,52 +274,7 @@ func (_c *MockResourceClient_List_Call) Return(_a0 []*unstructured.Unstructured,
 	return _c
 }
 
-func (_c *MockResourceClient_List_Call) RunAndReturn(run func(context.Context, string) ([]*unstructured.Unstructured, error)) *MockResourceClient_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ShouldProcess provides a mock function with no fields
-func (_m *MockResourceClient) ShouldProcess() bool {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ShouldProcess")
-	}
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// MockResourceClient_ShouldProcess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShouldProcess'
-type MockResourceClient_ShouldProcess_Call struct {
-	*mock.Call
-}
-
-// ShouldProcess is a helper method to define mock.On call
-func (_e *MockResourceClient_Expecter) ShouldProcess() *MockResourceClient_ShouldProcess_Call {
-	return &MockResourceClient_ShouldProcess_Call{Call: _e.mock.On("ShouldProcess")}
-}
-
-func (_c *MockResourceClient_ShouldProcess_Call) Run(run func()) *MockResourceClient_ShouldProcess_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockResourceClient_ShouldProcess_Call) Return(_a0 bool) *MockResourceClient_ShouldProcess_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockResourceClient_ShouldProcess_Call) RunAndReturn(run func() bool) *MockResourceClient_ShouldProcess_Call {
+func (_c *MockResourceClient_List_Call) RunAndReturn(run func(context.Context, string, ...ListOption) ([]*unstructured.Unstructured, error)) *MockResourceClient_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

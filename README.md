@@ -85,8 +85,8 @@ resources:
 
 The following metrics are pushed to Prometheus Pushgateway:
 
-- **`euthanaisa_resources_scanned_total`**: Total number of Kubernetes resources scanned by kind.
-- **`euthanaisa_resource_delete_duration_seconds`**: Histogram of time taken to delete a resource.
-- **`euthanaisa_resources_killable_total`**: TTotal number of resources that are killable by euthanaisa.
-- **`euthanaisa_killed_total`**: Number of Kubernetes resources killed by euthanaisa.
-- **`euthanaisa_errors_total`**: Number of errors encountered while processing resources in euthanaisa.
+- **`euthanaisa_resources_scanned_total{resource}`**: Total number of Kubernetes resources scanned by kind.
+- **`euthanaisa_resource_delete_duration_seconds{resource}`**: Histogram of time taken to delete a resource.
+- **`euthanaisa_resources_killable_total{resource, namespace}`**: Total number of resources that are killable by euthanaisa.
+- **`euthanaisa_killed_total{group, resource}`**: Number of Kubernetes resources killed by euthanaisa.
+- **`euthanaisa_errors_total{group, resource}`**: Number of errors encountered while processing resources in euthanaisa.

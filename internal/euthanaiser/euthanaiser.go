@@ -18,6 +18,8 @@ import (
 const (
 	// KillAfterAnnotation is the key used to mark when a resource should be deleted by euthanaisa.
 	KillAfterAnnotation = "euthanaisa.nais.io/kill-after"
+	// LabelSelectorEnabledResources is the label selector used to filter resources that should be processed by euthanaisa.
+	LabelSelectorEnabledResources = "euthanaisa.nais.io/enabled=true"
 )
 
 type euthanaiser struct {
@@ -47,7 +49,7 @@ func (e *euthanaiser) Run(ctx context.Context) {
 }
 
 func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.ResourceClient) {
-	list, err := rc.List(ctx, metav1.NamespaceAll)
+	list, err := rc.List(ctx, metav1.NamespaceAll, client.WithLabelSelector(LabelSelectorEnabledResources))
 	if err != nil {
 		e.log.WithError(err).WithField("resource", rc.GetResourceName()).Error("listing resources")
 		metrics.ResourceErrors.WithLabelValues(rc.GetResourceGroup(), rc.GetResourceName()).Inc()
