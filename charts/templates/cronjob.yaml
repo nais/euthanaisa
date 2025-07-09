@@ -33,9 +33,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.name
                 - name: CRONJOB_NAME
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: "{{ .Release.Name }}"
+                  value: "{{ .Release.Name }}"
               securityContext:
                 capabilities:
                   drop:
