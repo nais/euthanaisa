@@ -6,7 +6,7 @@ pushgatewayURL: ""
 
 apiserverIP: ""
 
-schedule: "*/10 * * * *"
+schedule: "*/2 * * * *"
 
 alerts: true
 
