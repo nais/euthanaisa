@@ -31,7 +31,7 @@ var (
 			Name: "euthanaisa_resources_killable_total",
 			Help: "Total number of resources that are killable by euthanaisa",
 		},
-		[]string{"resource", "namespace"},
+		[]string{"resource", "team"},
 	)
 
 	ResourceKilled = prometheus.NewCounterVec(
