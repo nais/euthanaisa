@@ -66,7 +66,6 @@ func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher
 	pusher := push.New(pushGatewayURL, "euthanaisa").
 		Gatherer(registry).
 		Grouping("namespace", os.Getenv("NAMESPACE")).
-		Grouping("pod", os.Getenv("HOSTNAME")).
 		Grouping("job", os.Getenv("CRONJOB_NAME"))
 
 	return pusher
