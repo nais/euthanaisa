@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/push"
 )
 
@@ -58,8 +57,6 @@ func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher
 		ResourcesKillableTotal,
 		ResourceKilled,
 		ResourceErrors,
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
 	if pushGatewayURL == "" {
