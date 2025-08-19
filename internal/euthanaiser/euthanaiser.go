@@ -39,7 +39,7 @@ func New(ownerClients []client.ResourceClient, resourceHandlersByKind client.Han
 }
 
 func (e *euthanaiser) Run(ctx context.Context) {
-	// defer e.pushMetrics(ctx)
+	defer e.pushMetrics(ctx)
 
 	for _, rc := range e.ownerClients {
 		e.listAndProcessResources(ctx, rc)
