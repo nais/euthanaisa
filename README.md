@@ -1,6 +1,6 @@
 # euthanaisa
 
-Euthanaisa is a Kubernetes utility that loops through all resources in the cluster looking for the annotation
+Euthanaisa is a Kubernetes utility that loops through all defined resources in the cluster looking for the annotation
 `euthanaisa.nais.io/kill-after: <timestamp>`.
 
 If it finds this annotation, and the timestamp is valid and earlier than `time.Now()`, it deletes the resource.
