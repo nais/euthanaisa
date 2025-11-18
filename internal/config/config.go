@@ -6,6 +6,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,10 +31,10 @@ type MetricConfig struct {
 	PushgatewayEnabled  bool   `envconfig:"PUSHGATEWAY_ENABLED" default:"false"`
 }
 
-func NewConfig() (*Config, error) {
+func NewConfig(log *logrus.Entry) (*Config, error) {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("No .env file found")
+		log.WithError(err).Warnf(".env file not found, continuing with default envs")
 	}
 
 	cfg := &Config{}

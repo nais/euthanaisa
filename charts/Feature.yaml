@@ -20,7 +20,7 @@ values:
   pushgateway.enabled:
     displayName: Enable Pushgateway
     config:
-      type: boolean
+      type: bool
   logLevel:
     displayName: Log level
     config:

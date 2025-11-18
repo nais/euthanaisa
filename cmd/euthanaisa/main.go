@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/joho/godotenv"
 	"github.com/nais/euthanaisa/internal/client"
 	"github.com/nais/euthanaisa/internal/config"
 	"github.com/nais/euthanaisa/internal/euthanaiser"
@@ -30,12 +29,7 @@ func main() {
 
 	l := logrus.StandardLogger()
 
-	err := godotenv.Load()
-	if err != nil {
-		l.WithError(err).Warnf(".env file not found, continuing with default envs")
-	}
-
-	cfg, err := config.NewConfig()
+	cfg, err := config.NewConfig(l.WithField("system", "config"))
 	if err != nil {
 		l.WithError(err).Errorf("error when processing configuration")
 		os.Exit(exitCodeRunError)
