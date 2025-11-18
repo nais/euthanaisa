@@ -10,11 +10,11 @@ import (
 )
 
 type Config struct {
-	Resources      []ResourceConfig
-	PushgatewayURL string `envconfig:"PUSHGATEWAY_URL"`
-	LogLevel       string `envconfig:"LOG_LEVEL" default:"info"`
-	LogFormat      string `envconfig:"LOG_FORMAT" default:"json"`
-	ResourcesFile  string `envconfig:"RESOURCES_FILE" default:"/app/config/resources.yaml"`
+	Resources     []ResourceConfig
+	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
+	LogFormat     string `envconfig:"LOG_FORMAT" default:"json"`
+	ResourcesFile string `envconfig:"RESOURCES_FILE" default:"/app/config/resources.yaml"`
+	Metrics       MetricConfig
 }
 
 type ResourceConfig struct {
@@ -23,6 +23,11 @@ type ResourceConfig struct {
 	Kind     string   `yaml:"kind"`
 	Resource string   `yaml:"resource"`
 	OwnedBy  []string `yaml:"ownedBy"`
+}
+
+type MetricConfig struct {
+	PushgatewayEndpoint string `envconfig:"PUSHGATEWAY_ENDPOINT" default:""`
+	PushgatewayEnabled  bool   `envconfig:"PUSHGATEWAY_ENABLED" default:"false"`
 }
 
 func NewConfig() (*Config, error) {

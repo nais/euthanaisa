@@ -11,12 +11,16 @@ values:
     displayName: Cronjob schedule
     config:
       type: string
-  pushgatewayURL:
+  pushgateway.url:
     displayName: Pushgateway URL
     config:
       type: string
     computed:
       template: "http://prometheus-pushgateway.nais-system:9091"
+  pushgateway.enabled:
+    displayName: Enable Pushgateway
+    config:
+      type: boolean
   logLevel:
     displayName: Log level
     config:

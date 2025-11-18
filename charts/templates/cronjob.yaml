@@ -16,9 +16,11 @@ spec:
           containers:
             - name: "{{ .Chart.Name }}"
               env:
-              {{- if .Values.pushgatewayURL }}
-                - name: PUSHGATEWAY_URL
-                  value: "{{ .Values.pushgatewayURL }}"
+              {{- if .Values.pushgateway.enabled }}
+                - name: PUSHGATEWAY_ENDPOINT
+                  value: "{{ .Values.pushgateway.endpoint }}"
+                - name: PUSHGATEWAY_ENABLED
+                  value: "{{ Values.pushgateway.enabled }}"
               {{- end }}
                 - name: LOG_LEVEL
                   value: "{{ .Values.logLevel }}"

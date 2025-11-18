@@ -58,7 +58,7 @@ func main() {
 	}
 
 	registry := prometheus.NewRegistry()
-	pusher := metrics.Register(cfg.PushgatewayURL, registry)
+	pusher := metrics.Register(cfg.Metrics, registry)
 
 	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
 	clients, handlerByKind, err := factory.BuildClients(cfg.Resources)

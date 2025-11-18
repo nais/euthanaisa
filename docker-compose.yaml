@@ -13,4 +13,4 @@ services:
     image: prom/pushgateway
     container_name: pushgateway
     ports:
-      - "9093:9093"
+      - "9091:9091"

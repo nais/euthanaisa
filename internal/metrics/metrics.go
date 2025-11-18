@@ -3,6 +3,7 @@ package metrics
 import (
 	"os"
 
+	"github.com/nais/euthanaisa/internal/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 )
@@ -50,7 +51,7 @@ var (
 	)
 )
 
-func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher {
+func Register(cfg config.MetricConfig, registry *prometheus.Registry) *push.Pusher {
 	registry.MustRegister(
 		ResourcesScannedTotal,
 		ResourceDeleteDuration,
@@ -59,11 +60,11 @@ func Register(pushGatewayURL string, registry *prometheus.Registry) *push.Pusher
 		ResourceErrors,
 	)
 
-	if pushGatewayURL == "" {
+	if !cfg.PushgatewayEnabled {
 		return nil
 	}
 
-	pusher := push.New(pushGatewayURL, "euthanaisa").
+	pusher := push.New(cfg.PushgatewayEndpoint, "euthanaisa").
 		Gatherer(registry).
 		Grouping("namespace", os.Getenv("NAMESPACE")).
 		Grouping("job", os.Getenv("CRONJOB_NAME"))
