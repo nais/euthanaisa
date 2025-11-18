@@ -204,8 +204,8 @@ func TestEuthanaiser_Run(t *testing.T) {
 			tt.setupMocks(mockRC)
 
 			e := &euthanaiser{
-				log:          logrus.New(),
-				ownerClients: []client.ResourceClient{mockRC},
+				log:     logrus.New(),
+				clients: []client.ResourceClient{mockRC},
 			}
 
 			e.Run(context.Background())
@@ -270,7 +270,7 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 
 			e := &euthanaiser{
 				log: logrus.New(),
-				ownerClients: []client.ResourceClient{
+				clients: []client.ResourceClient{
 					resourceHandler,
 				},
 				resourceHandlersByKind: client.HandlerByKind{

@@ -28,7 +28,7 @@ func (h HandlerByKind) Get(kind string) (ResourceClient, bool) {
 }
 
 func (f *factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]ResourceClient, HandlerByKind, error) {
-	var ownerClients []ResourceClient
+	var clients []ResourceClient
 	handlerByKind := make(HandlerByKind)
 
 	for _, r := range resourceConfigs {
@@ -50,13 +50,10 @@ func (f *factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 			f.log.Warnf("resource client %s has empty kind; skipping handlerByKind map entry", r.Resource)
 		}
 
-		// Only include as an "owner" if it owns other resources
-		if len(r.OwnedBy) > 0 {
-			ownerClients = append(ownerClients, handler)
-		}
+		clients = append(clients, handler)
 	}
 
-	return ownerClients, handlerByKind, nil
+	return clients, handlerByKind, nil
 }
 
 func newResourceHandler(dyn dynamic.Interface, cfg config.ResourceConfig) (ResourceClient, error) {

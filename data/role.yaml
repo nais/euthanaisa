@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-role
+  annotations:
+    # must be a valid RFC 3339 date-time string
+    euthanaisa.nais.io/kill-after: "2024-12-31T23:59:59Z"
+    # LabelSelectorEnabledResources = "euthanaisa.nais.io/enabled=true"
+  labels:
+    euthanaisa.nais.io/enabled: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]

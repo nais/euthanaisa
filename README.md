@@ -9,6 +9,32 @@ If the resource has an owner reference to a `nais.io/Application`, it will delet
 
 On completion, it pushes metrics to Prometheus Pushgateway, prefixed with `euthanaisa`.
 
+## euthanaisa.nais.io/kill-after Annotation
+
+Euthanaisa uses the annotation `euthanaisa.nais.io/kill-after` to determine when a Kubernetes resource should be deleted.
+
+This annotation contains a timestamp in RFC3339 format (e.g. 2025-03-10T14:30:00Z) that represents the exact point in
+time when the resource is allowed to be removed.
+
+For resources created from a value, the TTL is first parsed as a Go time.Duration (e.g. "1h", "
+30m", "24h"). Euthanaisa then computes the kill time like this:
+
+kill-after = current time + TTL
+
+The result is stored as a timestamp, for example:
+
+euthanaisa.nais.io/kill-after: "2025-03-10T14:30:00Z"
+
+During its cleanup loop, Euthanaisa reads this annotation and deletes the resource once the timestamp is in the past. If
+the resource has an owner reference, the owner will be deleted instead.
+
+## Label-Based Resource Filtering
+
+Euthanaisa only processes resources that explicitly opt-in.
+To enable cleanup for a resource, add the following label: `euthanaisa.nais.io/enabled=true`
+
+Only resources with this label and a valid `euthanaisa.nais.io/kill-after` timestamp will be evaluated for deletion.
+
 ## Features
 
 - Scans Kubernetes resources for the `kill-after` annotation.
@@ -87,6 +113,7 @@ The following metrics are pushed to Prometheus Pushgateway:
 
 - **`euthanaisa_resources_scanned_total{resource}`**: Total number of Kubernetes resources scanned by kind.
 - **`euthanaisa_resource_delete_duration_seconds{resource}`**: Histogram of time taken to delete a resource.
-- **`euthanaisa_resources_killable_total{resource, namespace}`**: Total number of resources that are killable by euthanaisa.
+- **`euthanaisa_resources_killable_total{resource, namespace}`**: Total number of resources that are killable by
+  euthanaisa.
 - **`euthanaisa_killed_total{group, resource}`**: Number of Kubernetes resources killed by euthanaisa.
 - **`euthanaisa_errors_total{group, resource}`**: Number of errors encountered while processing resources in euthanaisa.

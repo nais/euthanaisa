@@ -23,15 +23,15 @@ const (
 )
 
 type euthanaiser struct {
-	ownerClients           []client.ResourceClient
+	clients                []client.ResourceClient
 	resourceHandlersByKind client.HandlerByKind
 	pusher                 *push.Pusher
 	log                    logrus.FieldLogger
 }
 
-func New(ownerClients []client.ResourceClient, resourceHandlersByKind client.HandlerByKind, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
+func New(clients []client.ResourceClient, resourceHandlersByKind client.HandlerByKind, pusher *push.Pusher, log logrus.FieldLogger) *euthanaiser {
 	return &euthanaiser{
-		ownerClients:           ownerClients,
+		clients:                clients,
 		resourceHandlersByKind: resourceHandlersByKind,
 		pusher:                 pusher,
 		log:                    log,
@@ -41,7 +41,7 @@ func New(ownerClients []client.ResourceClient, resourceHandlersByKind client.Han
 func (e *euthanaiser) Run(ctx context.Context) {
 	defer e.pushMetrics(ctx)
 
-	for _, rc := range e.ownerClients {
+	for _, rc := range e.clients {
 		e.listAndProcessResources(ctx, rc)
 	}
 

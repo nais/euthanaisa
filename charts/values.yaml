@@ -40,3 +40,11 @@ resources:
     resource: naisjobs
     group: nais.io
     version: v1
+  - kind: Role
+    resource: roles
+    group: rbac.authorization.k8s.io
+    version: v1
+  - kind: RoleBinding
+    resource: rolebindings
+    group: rbac.authorization.k8s.io
+    version: v1

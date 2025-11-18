@@ -3,7 +3,7 @@ services:
     image: prom/prometheus
     container_name: prometheus.yml
     ports:
-      - "9090:9090"
+      - "9092:9092"
     volumes:
       - ./data/prometheus.yml.yml:/etc/prometheus.yml/prometheus.yml.yml
     depends_on:
@@ -13,4 +13,4 @@ services:
     image: prom/pushgateway
     container_name: pushgateway
     ports:
-      - "9091:9091"
+      - "9093:9093"

@@ -61,13 +61,13 @@ func main() {
 	pusher := metrics.Register(cfg.PushgatewayURL, registry)
 
 	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
-	ownerClients, handlerByKind, err := factory.BuildClients(cfg.Resources)
+	clients, handlerByKind, err := factory.BuildClients(cfg.Resources)
 	if err != nil {
 		appLog.WithError(err).Errorf("error when building resource clients")
 		os.Exit(exitCodeRunError)
 	}
 
-	e := euthanaiser.New(ownerClients, handlerByKind, pusher, appLog.WithField("system", "euthanaisa"))
+	e := euthanaiser.New(clients, handlerByKind, pusher, appLog.WithField("system", "euthanaisa"))
 	e.Run(ctx)
 	os.Exit(exitCodeSuccess)
 }
