@@ -20,7 +20,7 @@ spec:
                 - name: PUSHGATEWAY_ENDPOINT
                   value: "{{ .Values.pushgateway.endpoint }}"
                 - name: PUSHGATEWAY_ENABLED
-                  value: "{{ Values.pushgateway.enabled }}"
+                  value: "{{ .Values.pushgateway.enabled }}"
               {{- end }}
                 - name: LOG_LEVEL
                   value: "{{ .Values.logLevel }}"
