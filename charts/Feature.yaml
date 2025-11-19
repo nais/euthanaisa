@@ -11,8 +11,8 @@ values:
     displayName: Cronjob schedule
     config:
       type: string
-  pushgateway.url:
-    displayName: Pushgateway URL
+  pushgateway.endpoint:
+    displayName: Pushgateway endpoint
     config:
       type: string
     computed:
