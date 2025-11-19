@@ -56,6 +56,11 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 		return
 	}
 
+	e.log.WithFields(logrus.Fields{
+		"resource": rc.GetResourceName(),
+		"count":    len(list),
+	}).Info("scanned resources")
+
 	metrics.ResourcesScannedTotal.WithLabelValues(rc.GetResourceName()).Add(float64(len(list)))
 
 	for _, item := range list {
@@ -77,7 +82,7 @@ func (e *euthanaiser) getResourceHandlerForOwnedResource(item *unstructured.Unst
 }
 
 func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *unstructured.Unstructured) error {
-	shouldKill, err := shouldBeKilled(u, rc.GetResourceName())
+	shouldKill, err := shouldBeKilled(u, rc.GetResourceName(), e.log)
 	if err != nil {
 		return fmt.Errorf("checking if resource should be killed: %w", err)
 	}
@@ -110,7 +115,7 @@ func (e *euthanaiser) process(ctx context.Context, rc client.ResourceClient, u *
 	return nil
 }
 
-func shouldBeKilled(u *unstructured.Unstructured, rCResourceName string) (bool, error) {
+func shouldBeKilled(u *unstructured.Unstructured, rCResourceName string, log logrus.FieldLogger) (bool, error) {
 	if u.GetDeletionTimestamp() != nil {
 		return false, nil // already deleting
 	}
@@ -119,6 +124,13 @@ func shouldBeKilled(u *unstructured.Unstructured, rCResourceName string) (bool, 
 	if killAfterStr == "" {
 		return false, nil // no annotation
 	}
+
+	log.WithFields(logrus.Fields{
+		"namespace": u.GetNamespace(),
+		"name":      u.GetName(),
+		"resource":  rCResourceName,
+		"killAfter": killAfterStr,
+	}).Debug("found resource with kill-after annotation")
 
 	metrics.ResourcesKillableTotal.WithLabelValues(rCResourceName, u.GetNamespace()).Inc()
 
