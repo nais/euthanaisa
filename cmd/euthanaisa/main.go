@@ -37,7 +37,7 @@ func main() {
 
 	appLog := setupLogger(l, cfg.LogFormat, cfg.LogLevel)
 
-	appLog.WithField("system", "main").Infof("Starting euthanaisa with log level %s and format %s", cfg.LogLevel, cfg.LogFormat)
+	appLog.WithField("system", "main").Infof("starting euthanaisa with log level %s and format %s", cfg.LogLevel, cfg.LogFormat)
 
 	kubeConfig, err := kubeconfig()
 	if err != nil {
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	registry := prometheus.NewRegistry()
-	pusher := metrics.Register(cfg.Metrics, registry)
+	pusher := metrics.Register(cfg.Metrics, registry, appLog.WithField("system", "metrics"))
 
 	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
 	clients, handlerByKind, err := factory.BuildClients(cfg.Resources)

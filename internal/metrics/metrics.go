@@ -1,11 +1,10 @@
 package metrics
 
 import (
-	"os"
-
 	"github.com/nais/euthanaisa/internal/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -51,7 +50,7 @@ var (
 	)
 )
 
-func Register(cfg config.MetricConfig, registry *prometheus.Registry) *push.Pusher {
+func Register(cfg config.MetricConfig, registry *prometheus.Registry, log *logrus.Entry) *push.Pusher {
 	registry.MustRegister(
 		ResourcesScannedTotal,
 		ResourceDeleteDuration,
@@ -64,10 +63,7 @@ func Register(cfg config.MetricConfig, registry *prometheus.Registry) *push.Push
 		return nil
 	}
 
-	pusher := push.New(cfg.PushgatewayEndpoint, "euthanaisa").
-		Gatherer(registry).
-		Grouping("namespace", os.Getenv("NAMESPACE")).
-		Grouping("job", os.Getenv("CRONJOB_NAME"))
-
+	pusher := push.New(cfg.PushgatewayEndpoint, "euthanaisa").Gatherer(registry)
+	log.Infof("prometheus Pushgateway enabled, pushing metrics to %s", cfg.PushgatewayEndpoint)
 	return pusher
 }

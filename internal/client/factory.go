@@ -11,10 +11,10 @@ import (
 
 type factory struct {
 	dyn dynamic.Interface
-	log logrus.FieldLogger
+	log *logrus.Entry
 }
 
-func NewFactory(dyn dynamic.Interface, log logrus.FieldLogger) *factory {
+func NewFactory(dyn dynamic.Interface, log *logrus.Entry) *factory {
 	return &factory{
 		dyn: dyn,
 		log: log,
@@ -42,7 +42,7 @@ func (f *factory) BuildClients(resourceConfigs []config.ResourceConfig) ([]Resou
 			"group":    r.Group,
 			"version":  r.Version,
 			"kind":     r.Kind,
-		}).Debug("created resource handler")
+		}).Info("created resource handler")
 
 		if r.Kind != "" {
 			handlerByKind[r.Kind] = handler
