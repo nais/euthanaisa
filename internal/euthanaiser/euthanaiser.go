@@ -59,7 +59,7 @@ func (e *euthanaiser) listAndProcessResources(ctx context.Context, rc client.Res
 	e.log.WithFields(logrus.Fields{
 		"resource": rc.GetResourceName(),
 		"count":    len(list),
-	}).Info("scanned resources")
+	}).Debug("scanned resources")
 
 	metrics.ResourcesScannedTotal.WithLabelValues(rc.GetResourceName()).Add(float64(len(list)))
 
