@@ -19,11 +19,10 @@ type Config struct {
 }
 
 type ResourceConfig struct {
-	Group    string   `yaml:"group"`
-	Version  string   `yaml:"version"`
-	Kind     string   `yaml:"kind"`
-	Resource string   `yaml:"resource"`
-	OwnedBy  []string `yaml:"ownedBy"`
+	Group    string `yaml:"group"`
+	Version  string `yaml:"version"`
+	Kind     string `yaml:"kind"`
+	Resource string `yaml:"resource"`
 }
 
 type MetricConfig struct {

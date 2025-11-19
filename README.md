@@ -72,6 +72,4 @@ resources:
     resource: deployments
     group: apps
     apiVersion: v1
-    ownedBy:
-      - Application
 ```

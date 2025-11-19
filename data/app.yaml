@@ -5,7 +5,7 @@ metadata:
 spec:
   image: europe-north1-docker.pkg.dev/nais-io/nais/images/testapp:latest
   port: 8080
-  ttl: 1h
+  ttl: 1m
   replicas:
     max: 1
     min: 1

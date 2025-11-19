@@ -2,20 +2,14 @@
   kind: Deployment
   group: apps
   version: v1
-  ownedBy:
-    - Application
 - resource: cronjobs
   kind: CronJob
   group: batch
   version: v1
-  ownedBy:
-    - Naisjob
 - resource: jobs
   kind: Job
   group: batch
   version: v1
-  ownedBy:
-    - Naisjob
 - resource: applications
   kind: Application
   group: nais.io

@@ -235,6 +235,7 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			ownerRefs: []metav1.OwnerReference{
 				{
 					Kind: "OwnerKind",
+					Name: "owner1",
 				},
 			},
 			expectOwnerHandler: true,
@@ -254,18 +255,27 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			ownerHandler := client.NewMockResourceClient(t)
 			resourceHandler := client.NewMockResourceClient(t)
 
-			resourceHandler.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{resource}, nil)
-			resourceHandler.On("GetResourceName").Return("resource1")
+			resourceHandler.
+				On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).
+				Return([]*unstructured.Unstructured{resource}, nil)
+
+			// identities for rc handlers
+			resourceHandler.On("GetResourceName").Return("resource").Maybe()
+			resourceHandler.On("GetResourceKind").Return("ResourceKind").Maybe()
+			resourceHandler.On("GetResourceGroup").Return("apps").Maybe()
 
 			if tt.expectOwnerHandler {
-				ownerHandler.On("GetResourceName").Return("owner")
-				ownerHandler.On("GetResourceKind").Return("OwnerKind")
-				ownerHandler.On("GetResourceGroup").Return("apps")
-				ownerHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
-			} else {
-				resourceHandler.On("GetResourceKind").Return("ResourceKind")
-				resourceHandler.On("GetResourceGroup").Return("apps")
-				resourceHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil)
+				ownerHandler.On("GetResourceName").Return("owner").Maybe()
+				ownerHandler.On("GetResourceKind").Return("OwnerKind").Maybe()
+				ownerHandler.On("GetResourceGroup").Return("apps").Maybe()
+
+				// Expect deletion of OWNER, not child
+				ownerHandler.On("Delete", mock.Anything, "ns", "owner1").Return(nil).Once()
+			}
+
+			if !tt.expectOwnerHandler {
+				// Expect deletion of CHILD itself
+				resourceHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil).Once()
 			}
 
 			e := &euthanaiser{
@@ -281,7 +291,7 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			e.Run(context.Background())
 
 			if tt.expectOwnerHandler {
-				ownerHandler.AssertCalled(t, "Delete", mock.Anything, "ns", "resource1")
+				ownerHandler.AssertCalled(t, "Delete", mock.Anything, "ns", "owner1")
 				resourceHandler.AssertNotCalled(t, "Delete", mock.Anything, "ns", "resource1")
 			} else {
 				resourceHandler.AssertCalled(t, "Delete", mock.Anything, "ns", "resource1")

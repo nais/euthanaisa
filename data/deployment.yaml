@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+  annotations:
+    # must be a valid RFC 3339 date-time string
+    euthanaisa.nais.io/kill-after: "2024-12-31T23:59:59Z"
+    # LabelSelectorEnabledResources = "euthanaisa.nais.io/enabled=true"
+  labels:
+    euthanaisa.nais.io/enabled: "true"
+spec:
+  selector:
+    matchLabels:
+      app: secure
+  template:
+    metadata:
+      labels:
+        app: secure
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: nginx:1.25
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
