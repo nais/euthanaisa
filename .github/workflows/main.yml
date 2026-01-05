@@ -17,48 +17,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
-      - name: Find Go version
-        id: go_version
-        run: |
-          echo "go_version=$(grep golang .tool-versions | awk '{print $2}')" >> $GITHUB_OUTPUT
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
-          cache: true
-
+      - uses: jdx/mise-action@v3
       - run: make test
       - run: make helm-lint
       - run: make staticcheck
       - run: make vulncheck
-
       - uses: nais/platform-build-push-sign@main
         id: build-push-sign
         with:
           name: ${{ env.NAME }}
           build_args: |
-            go_version=${{ steps.go_version.outputs.go_version }}
+            GO_VERSION=$(mise current go)
           google_service_account: gh-${{ env.NAME }}
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           push: true
-
       - uses: azure/setup-helm@v4
         name: "Setup Helm"
         with:
           version: "3.14.2"
-
       - name: Build Chart
         run: |-
           sed -i "s/^version: .*/version: ${{ steps.build-push-sign.outputs.version }}/g" charts/Chart.yaml
           cat charts/Chart.yaml
           helm package charts
-
       - name: Push Chart
         run: |-
           helm push ${{ env.NAME }}*.tgz ${{ env.IMAGE_REPOSITORY }}
-
   rollout:
     needs:
       - build_and_push
