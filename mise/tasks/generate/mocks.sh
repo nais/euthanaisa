@@ -4,4 +4,4 @@
 set -euo pipefail
 
 find internal -type f -name "mock_*.go" -delete
-go run github.com/vektra/mockery/v2 --config ./.configs/mockery.yaml
+go run github.com/vektra/mockery/v3 --config ./.configs/mockery.yaml
