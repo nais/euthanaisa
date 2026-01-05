@@ -78,15 +78,15 @@ func TestEuthanaiser_ProcessResource(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockRC := client.NewMockResourceClient(t)
-			mockRC.On("GetResourceName").Return("applications")
+			mockRC.EXPECT().GetResourceName().Return("applications")
 			if tc.expectDelete {
-				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("Delete", mock.Anything, "ns", "name").Return(tc.deleteErr)
+				mockRC.EXPECT().GetResourceName().Return("applications")
+				mockRC.EXPECT().Delete(mock.Anything, "ns", "name").Return(tc.deleteErr)
 			}
 
 			if tc.expectKilled {
-				mockRC.On("GetResourceKind").Return("Deployment")
-				mockRC.On("GetResourceGroup").Return("apps")
+				mockRC.EXPECT().GetResourceKind().Return("Deployment")
+				mockRC.EXPECT().GetResourceGroup().Return("apps")
 			}
 
 			e := &euthanaiser{log: logrus.New()}
@@ -133,11 +133,11 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
 				})
 
-				mockRC.On("GetResourceKind").Return("Deployment")
-				mockRC.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.On("Delete", mock.Anything, "ns", "expired").Return(nil)
-				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("GetResourceGroup").Return("apps")
+				mockRC.EXPECT().GetResourceKind().Return("Deployment")
+				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
+				mockRC.EXPECT().Delete(mock.Anything, "ns", "expired").Return(nil)
+				mockRC.EXPECT().GetResourceName().Return("applications")
+				mockRC.EXPECT().GetResourceGroup().Return("apps")
 			},
 			expectedDelete: true,
 		},
@@ -151,8 +151,8 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: time.Now().Add(1 * time.Hour).Format(time.RFC3339),
 				})
 
-				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
+				mockRC.EXPECT().GetResourceName().Return("applications")
+				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
 			},
 			expectedDelete: false,
 		},
@@ -166,18 +166,18 @@ func TestEuthanaiser_Run(t *testing.T) {
 					KillAfterAnnotation: "invalid-time-format",
 				})
 
-				mockRC.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("GetResourceGroup").Return("apps")
+				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
+				mockRC.EXPECT().GetResourceName().Return("applications")
+				mockRC.EXPECT().GetResourceGroup().Return("apps")
 			},
 			expectedDelete: false,
 		},
 		{
 			name: "should handle list error gracefully",
 			setupMocks: func(mockRC *client.MockResourceClient) {
-				mockRC.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return(nil, fmt.Errorf("list failed"))
-				mockRC.On("GetResourceName").Return("applications")
-				mockRC.On("GetResourceGroup").Return("apps")
+				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return(nil, fmt.Errorf("list failed"))
+				mockRC.EXPECT().GetResourceName().Return("applications")
+				mockRC.EXPECT().GetResourceGroup().Return("apps")
 			},
 			expectedDelete: false,
 		},
@@ -191,8 +191,8 @@ func TestEuthanaiser_Run(t *testing.T) {
 					"some-other-annotation": "value",
 				})
 
-				mockRC.On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.On("GetResourceName").Return("applications")
+				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
+				mockRC.EXPECT().GetResourceName().Return("applications")
 			},
 			expectedDelete: false,
 		},
@@ -256,26 +256,26 @@ func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
 			resourceHandler := client.NewMockResourceClient(t)
 
 			resourceHandler.
-				On("List", mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).
+				EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).
 				Return([]*unstructured.Unstructured{resource}, nil)
 
 			// identities for rc handlers
-			resourceHandler.On("GetResourceName").Return("resource").Maybe()
-			resourceHandler.On("GetResourceKind").Return("ResourceKind").Maybe()
-			resourceHandler.On("GetResourceGroup").Return("apps").Maybe()
+			resourceHandler.EXPECT().GetResourceName().Return("resource").Maybe()
+			resourceHandler.EXPECT().GetResourceKind().Return("ResourceKind").Maybe()
+			resourceHandler.EXPECT().GetResourceGroup().Return("apps").Maybe()
 
 			if tt.expectOwnerHandler {
-				ownerHandler.On("GetResourceName").Return("owner").Maybe()
-				ownerHandler.On("GetResourceKind").Return("OwnerKind").Maybe()
-				ownerHandler.On("GetResourceGroup").Return("apps").Maybe()
+				ownerHandler.EXPECT().GetResourceName().Return("owner").Maybe()
+				ownerHandler.EXPECT().GetResourceKind().Return("OwnerKind").Maybe()
+				ownerHandler.EXPECT().GetResourceGroup().Return("apps").Maybe()
 
 				// Expect deletion of OWNER, not child
-				ownerHandler.On("Delete", mock.Anything, "ns", "owner1").Return(nil).Once()
+				ownerHandler.EXPECT().Delete(mock.Anything, "ns", "owner1").Return(nil).Once()
 			}
 
 			if !tt.expectOwnerHandler {
 				// Expect deletion of CHILD itself
-				resourceHandler.On("Delete", mock.Anything, "ns", "resource1").Return(nil).Once()
+				resourceHandler.EXPECT().Delete(mock.Anything, "ns", "resource1").Return(nil).Once()
 			}
 
 			e := &euthanaiser{

@@ -1,5 +1,5 @@
-ARG GO_VERSION=""
-FROM golang:${GO_VERSION}alpine AS builder
+ARG GO_VERSION=1.25
+FROM golang:${GO_VERSION} AS builder
 WORKDIR /src
 COPY go.* /src/
 RUN go mod download

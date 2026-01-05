@@ -34,19 +34,19 @@ Euthanaisa also pushes metrics to Prometheus Pushgateway with the euthanaisa pre
 To build and run and push metrics locally:
 
 ```bash
-  make local
+mise run local
 ```
 
 To build a Linux binary:
 
 ```bash
-  make linux-binary
+mise run build
 ```
 
 To test the project, you can use the following command:
 
 ```bash
-  make test
+mise run test
 ```
 
 ### Configuration

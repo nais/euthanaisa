@@ -1,0 +1,6 @@
+[tools]
+go = "1.25.5"
+helm = "4.0.4"
+
+[settings]
+pin = true
