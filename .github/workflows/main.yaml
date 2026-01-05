@@ -1,5 +1,6 @@
 name: Build and push image and chart
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -7,7 +8,31 @@ env:
   IMAGE_REPOSITORY: oci://europe-north1-docker.pkg.dev/nais-io/nais
   NAME: euthanaisa
 jobs:
-  build_and_push:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        mise-task:
+          - check:deadcode
+          - check:gosec
+          - check:govet
+          - check:govulncheck
+          - check:helm-lint
+          - check:ratchet
+          - check:staticcheck
+          - ci:fmt
+          - test
+    name: |
+      Run mise task: ${{ matrix.mise-task }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
+      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # ratchet:jdx/mise-action@v3
+      - run: mise run ${{ matrix.mise-task }}
+  build-and-push:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - checks
     outputs:
       version: ${{ steps.build-push-sign.outputs.version }}
     permissions:
@@ -18,10 +43,6 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # ratchet:actions/checkout@v6
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # ratchet:jdx/mise-action@v3
-      - run: mise run test
-      - run: mise run check:helm-lint
-      - run: mise run check:staticcheck
-      - run: mise run check:govulncheck
       - uses: nais/platform-build-push-sign@8be8359cd90915318ee8ab5fbc8337d04937ae70 # ratchet:nais/platform-build-push-sign@main
         id: build-push-sign
         with:
@@ -31,21 +52,15 @@ jobs:
           google_service_account: gh-${{ env.NAME }}
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           push: true
-      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v4
-        name: "Setup Helm"
-        with:
-          version: "3.14.2"
-      - name: Build Chart
-        run: |-
+      - run: |-
           sed -i "s/^version: .*/version: ${{ steps.build-push-sign.outputs.version }}/g" charts/Chart.yaml
           cat charts/Chart.yaml
           helm package charts
-      - name: Push Chart
-        run: |-
-          helm push ${{ env.NAME }}*.tgz ${{ env.IMAGE_REPOSITORY }}
+      - run: helm push ${{ env.NAME }}*.tgz ${{ env.IMAGE_REPOSITORY }}
   rollout:
+    if: github.ref == 'refs/heads/main'
     needs:
-      - build_and_push
+      - build-and-push
     runs-on: fasit-deploy
     permissions:
       id-token: write
@@ -53,4 +68,4 @@ jobs:
       - uses: nais/fasit-deploy@8727ed1c7a5a465e837873e6016a9a692a6b874a # ratchet:nais/fasit-deploy@v2
         with:
           chart: ${{ env.IMAGE_REPOSITORY }}/${{ env.NAME }}
-          version: ${{ needs.build_and_push.outputs.version }}
+          version: ${{ needs.build-and-push.outputs.version }}
