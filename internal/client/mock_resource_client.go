@@ -284,8 +284,7 @@ func (_c *MockResourceClient_List_Call) RunAndReturn(run func(context.Context, s
 func NewMockResourceClient(t interface {
 	mock.TestingT
 	Cleanup(func())
-},
-) *MockResourceClient {
+}) *MockResourceClient {
 	mock := &MockResourceClient{}
 	mock.Mock.Test(t)
 
