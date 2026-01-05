@@ -2,6 +2,8 @@ module github.com/nais/euthanaisa
 
 go 1.25.5
 
+tool github.com/vektra/mockery/v2
+
 require (
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/joho/godotenv v1.5.1
@@ -9,7 +11,6 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
-	github.com/vektra/mockery/v2 v2.53.5
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.34.2
 	k8s.io/client-go v0.34.2
@@ -53,6 +54,7 @@ require (
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/vektra/mockery/v2 v2.53.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
