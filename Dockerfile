@@ -1,5 +1,4 @@
-ARG GO_VERSION=1.25
-FROM golang:${GO_VERSION} AS builder
+FROM golang:1.25.5 AS builder
 WORKDIR /src
 COPY go.* /src/
 RUN go mod download

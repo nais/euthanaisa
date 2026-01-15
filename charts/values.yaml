@@ -3,7 +3,6 @@ image:
   name: euthanaisa
 
 pushgateway:
-  enabled: false
   endpoint: ""
 
 apiserverIP: ""
@@ -16,31 +15,24 @@ logLevel: debug
 logFormat: json
 
 resources:
-  - kind: Deployment
-    resource: deployments
+  - resource: deployments
     group: apps
     version: v1
-  - kind: CronJob
-    resource: cronjobs
+  - resource: cronjobs
     group: batch
     version: v1
-  - kind: Job
-    resource: jobs
+  - resource: jobs
     group: batch
     version: v1
-  - kind: Application
-    resource: applications
+  - resource: applications
     group: nais.io
     version: v1alpha1
-  - kind: Naisjob
-    resource: naisjobs
+  - resource: naisjobs
     group: nais.io
     version: v1
-  - kind: Role
-    resource: roles
+  - resource: roles
     group: rbac.authorization.k8s.io
     version: v1
-  - kind: RoleBinding
-    resource: rolebindings
+  - resource: rolebindings
     group: rbac.authorization.k8s.io
     version: v1

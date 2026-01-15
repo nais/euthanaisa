@@ -1,7 +1,6 @@
 environmentKinds:
   - tenant
   - onprem
-  - legacy
 values:
   apiserverIP:
     displayName: Kubernetes apiserver IP
@@ -17,10 +16,6 @@ values:
       type: string
     computed:
       template: "http://prometheus-pushgateway.nais-system:9091"
-  pushgateway.enabled:
-    displayName: Enable Pushgateway
-    config:
-      type: bool
   logLevel:
     displayName: Log level
     config:
