@@ -8,18 +8,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: "{{ .Release.Name }}"
 rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
+{{- range .Values.resources }}
+  - apiGroups: ["{{ .group }}"]
+    resources: ["{{ .resource }}"]
     verbs: ["list", "delete"]
-  - apiGroups: ["nais.io"]
-    resources: ["applications", "naisjobs"]
-    verbs: ["list", "delete"]
-  - apiGroups: ["batch"]
-    resources: ["cronjobs", "jobs"]
-    verbs: ["list", "delete"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["roles", "rolebindings"]
-    verbs: ["list", "delete"]
+{{- end }}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -33,5 +26,4 @@ roleRef:
   kind: ClusterRole
   name: "{{ .Release.Name }}"
   apiGroup: rbac.authorization.k8s.io
----
 

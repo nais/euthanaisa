@@ -2,4 +2,4 @@
 #MISE description="Format go code"
 set -euo pipefail
 
-go tool mvdan.cc/gofumpt -w ./
+go tool gofumpt -w ./

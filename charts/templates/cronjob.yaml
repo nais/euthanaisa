@@ -16,11 +16,9 @@ spec:
           containers:
             - name: "{{ .Chart.Name }}"
               env:
-              {{- if .Values.pushgateway.enabled }}
+              {{- if .Values.pushgateway.endpoint }}
                 - name: PUSHGATEWAY_ENDPOINT
                   value: "{{ .Values.pushgateway.endpoint }}"
-                - name: PUSHGATEWAY_ENABLED
-                  value: "{{ .Values.pushgateway.enabled }}"
               {{- end }}
                 - name: LOG_LEVEL
                   value: "{{ .Values.logLevel }}"
@@ -36,7 +34,7 @@ spec:
                 allowPrivilegeEscalation: false
                 seccompProfile:
                   type: RuntimeDefault
-              image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Chart.Version }}"
+              image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.Version }}"
               resources:
                 limits:
                   cpu: 200m

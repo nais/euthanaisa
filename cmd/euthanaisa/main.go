@@ -2,78 +2,120 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/nais/euthanaisa/internal/client"
-	"github.com/nais/euthanaisa/internal/config"
 	"github.com/nais/euthanaisa/internal/euthanaiser"
-	"github.com/nais/euthanaisa/internal/logger"
-	"github.com/nais/euthanaisa/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus/push"
+	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const (
-	exitCodeSuccess = iota
-	exitCodeRunError
-	exitCodeLoggerError
-)
+type resource struct {
+	Group    string `yaml:"group"`
+	Version  string `yaml:"version"`
+	Resource string `yaml:"resource"`
+}
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
 
-	l := logrus.StandardLogger()
+	logLevel := getEnv("LOG_LEVEL", "info")
+	logFormat := getEnv("LOG_FORMAT", "json")
+	resourcesFile := getEnv("RESOURCES_FILE", "/app/config/resources.yaml")
+	pushgatewayEndpoint := os.Getenv("PUSHGATEWAY_ENDPOINT")
 
-	cfg, err := config.NewConfig(l.WithField("system", "config"))
+	setupLogging(logLevel, logFormat)
+	slog.Info("starting euthanaisa", "logLevel", logLevel)
+
+	resources, err := loadResources(resourcesFile)
 	if err != nil {
-		l.WithError(err).Errorf("error when processing configuration")
-		os.Exit(exitCodeRunError)
+		slog.Error("loading resources", "error", err)
+		os.Exit(1)
 	}
-
-	appLog := setupLogger(l, cfg.LogFormat, cfg.LogLevel)
-
-	appLog.WithField("system", "main").Infof("starting euthanaisa with log level %s and format %s", cfg.LogLevel, cfg.LogFormat)
 
 	kubeConfig, err := kubeconfig()
 	if err != nil {
-		appLog.WithError(err).Errorf("error when getting kubeconfig")
-		os.Exit(exitCodeRunError)
+		slog.Error("getting kubeconfig", "error", err)
+		os.Exit(1)
 	}
 
 	dynClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
-		appLog.WithError(err).Errorf("error when creating dynamic client")
-		os.Exit(exitCodeRunError)
+		slog.Error("creating dynamic client", "error", err)
+		os.Exit(1)
 	}
 
-	registry := prometheus.NewRegistry()
-	pusher := metrics.Register(cfg.Metrics, registry, appLog.WithField("system", "metrics"))
+	clients := client.BuildClients(dynClient, resources)
 
-	factory := client.NewFactory(dynClient, appLog.WithField("system", "client-factory"))
-	clients, handlerByKind, err := factory.BuildClients(cfg.Resources)
-	if err != nil {
-		appLog.WithError(err).Errorf("error when building resource clients")
-		os.Exit(exitCodeRunError)
-	}
-
-	e := euthanaiser.New(clients, handlerByKind, pusher, appLog.WithField("system", "euthanaisa"))
+	e := euthanaiser.New(clients)
 	e.Run(ctx)
-	os.Exit(exitCodeSuccess)
+
+	pushMetrics(ctx, pushgatewayEndpoint)
 }
 
-func setupLogger(log *logrus.Logger, logFormat, logLevel string) logrus.FieldLogger {
-	appLogger, err := logger.New(logFormat, logLevel)
+func loadResources(path string) ([]client.Resource, error) {
+	b, err := os.ReadFile(path) // #nosec G304 -- path from trusted env var
 	if err != nil {
-		log.WithError(err).Errorf("error when creating application logger")
-		os.Exit(exitCodeLoggerError)
+		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
 
-	return appLogger
+	var resources []resource
+	if err = yaml.Unmarshal(b, &resources); err != nil {
+		return nil, fmt.Errorf("parsing %s: %w", path, err)
+	}
+
+	result := make([]client.Resource, len(resources))
+	for i, r := range resources {
+		result[i] = client.Resource{Group: r.Group, Version: r.Version, Resource: r.Resource}
+	}
+	return result, nil
+}
+
+func pushMetrics(ctx context.Context, endpoint string) {
+	if endpoint == "" {
+		return
+	}
+	slog.Info("pushing metrics", "endpoint", endpoint)
+	if err := push.New(endpoint, "euthanaisa").Gatherer(prometheus.DefaultGatherer).AddContext(ctx); err != nil {
+		slog.Error("pushing metrics", "error", err)
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func setupLogging(level, format string) {
+	var lvl slog.Level
+	switch level {
+	case "debug":
+		lvl = slog.LevelDebug
+	case "warn":
+		lvl = slog.LevelWarn
+	case "error":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+
+	opts := &slog.HandlerOptions{Level: lvl}
+	var handler slog.Handler
+	if format == "text" {
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stderr, opts)
+	}
+	slog.SetDefault(slog.New(handler))
 }
 
 func kubeconfig() (*rest.Config, error) {
@@ -81,11 +123,10 @@ func kubeconfig() (*rest.Config, error) {
 		return clientcmd.BuildConfigFromFlags("", kConfig)
 	}
 
-	home, err := os.UserHomeDir()
-	if err == nil {
-		kubeconfigPath := filepath.Join(home, ".kube", "config")
-		if _, err := os.Stat(kubeconfigPath); err == nil {
-			return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if home, err := os.UserHomeDir(); err == nil {
+		path := filepath.Join(home, ".kube", "config")
+		if _, err := os.Stat(path); err == nil {
+			return clientcmd.BuildConfigFromFlags("", path)
 		}
 	}
 

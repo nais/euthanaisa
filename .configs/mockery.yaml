@@ -1,9 +1,0 @@
-dir: "{{ .InterfaceDir }}"
-filename: "mock_{{ .InterfaceName | snakecase }}.go"
-template: testify
-template-data:
-  unroll-variadic: true
-packages:
-  github.com/nais/euthanaisa/internal/client:
-    interfaces:
-      ResourceClient:

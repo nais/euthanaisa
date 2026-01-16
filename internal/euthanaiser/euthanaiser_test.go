@@ -2,301 +2,119 @@ package euthanaiser
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/nais/euthanaisa/internal/client"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/stretchr/testify/assert"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestEuthanaiser_ProcessResource(t *testing.T) {
-	now := time.Now()
-	type testCase struct {
-		name            string
-		annotations     map[string]string
-		deleting        bool
-		deleteErr       error
-		expectDelete    bool
-		expectDeleteErr bool
-		expectKilled    bool
+type fakeClient struct {
+	resources    []*unstructured.Unstructured
+	listErr      error
+	deleteErr    error
+	deletedNames []string
+}
+
+func (f *fakeClient) List(_ context.Context, _ string) ([]*unstructured.Unstructured, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	return f.resources, nil
+}
+
+func (f *fakeClient) Delete(_ context.Context, _, name string) error {
+	if f.deleteErr != nil {
+		return f.deleteErr
+	}
+	f.deletedNames = append(f.deletedNames, name)
+	return nil
+}
+
+func (f *fakeClient) Name() string { return "test" }
+
+var _ client.ResourceClient = (*fakeClient)(nil)
+
+func TestShouldDelete(t *testing.T) {
+	fixedTime := time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)
+	e := &Euthanaiser{now: func() time.Time { return fixedTime }}
+
+	tests := []struct {
+		name     string
+		labels   map[string]string
+		deleting bool
+		want     bool
+	}{
+		{"expired", map[string]string{KillAfterLabel: "1705316400"}, false, true}, // 11:00 UTC
+		{"future", map[string]string{KillAfterLabel: "1705323600"}, false, false}, // 13:00 UTC
+		{"no label", map[string]string{"other": "value"}, false, false},
+		{"empty labels", nil, false, false},
+		{"already deleting", map[string]string{KillAfterLabel: "1705316400"}, true, false},
+		{"invalid timestamp", map[string]string{KillAfterLabel: "not-a-timestamp"}, false, false},
+		{"exactly now", map[string]string{KillAfterLabel: "1705320000"}, false, false}, // 12:00 UTC
 	}
 
-	tests := []testCase{
-		{
-			name: "should delete expired resource",
-			annotations: map[string]string{
-				KillAfterAnnotation: now.Add(-1 * time.Hour).Format(time.RFC3339),
-			},
-			expectDelete: true,
-			expectKilled: true,
-		},
-		{
-			name: "should not delete future resource",
-			annotations: map[string]string{
-				KillAfterAnnotation: now.Add(1 * time.Hour).Format(time.RFC3339),
-			},
-		},
-		{
-			name: "should skip already deleting",
-			annotations: map[string]string{
-				KillAfterAnnotation: now.Add(-1 * time.Hour).Format(time.RFC3339),
-			},
-			deleting: true,
-		},
-		{
-			name: "should error on malformed annotation",
-			annotations: map[string]string{
-				KillAfterAnnotation: "invalid-time",
-			},
-			expectDeleteErr: true,
-		},
-		{
-			name: "should handle delete not found",
-			annotations: map[string]string{
-				KillAfterAnnotation: now.Add(-1 * time.Hour).Format(time.RFC3339),
-			},
-			deleteErr:    errors.NewNotFound(schema.GroupResource{Group: "apps", Resource: "deployments"}, "name"),
-			expectDelete: true,
-		},
-		{
-			name: "should not delete if there is no kill-after annotation",
-			annotations: map[string]string{
-				"some-other-annotation": "value",
-			},
-			expectDelete: false,
-			expectKilled: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mockRC := client.NewMockResourceClient(t)
-			mockRC.EXPECT().GetResourceName().Return("applications")
-			if tc.expectDelete {
-				mockRC.EXPECT().GetResourceName().Return("applications")
-				mockRC.EXPECT().Delete(mock.Anything, "ns", "name").Return(tc.deleteErr)
-			}
-
-			if tc.expectKilled {
-				mockRC.EXPECT().GetResourceKind().Return("Deployment")
-				mockRC.EXPECT().GetResourceGroup().Return("apps")
-			}
-
-			e := &euthanaiser{log: logrus.New()}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			u := &unstructured.Unstructured{}
-			u.SetNamespace("ns")
-			u.SetName("name")
-			u.SetAnnotations(tc.annotations)
-			if tc.deleting {
-				ts := metav1.NewTime(now)
+			u.SetLabels(tt.labels)
+			if tt.deleting {
+				ts := metav1.NewTime(fixedTime)
 				u.SetDeletionTimestamp(&ts)
 			}
-
-			err := e.process(context.Background(), mockRC, u)
-
-			if tc.expectDeleteErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-
-			if tc.expectDelete {
-				mockRC.AssertCalled(t, "GetResourceName")
-				mockRC.AssertCalled(t, "Delete", mock.Anything, "ns", "name")
-			} else {
-				mockRC.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-			}
+			assert.Equal(t, tt.want, e.shouldDelete(u))
 		})
 	}
 }
 
-func TestEuthanaiser_Run(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupMocks     func(mockRC *client.MockResourceClient)
-		expectedDelete bool
-	}{
-		{
-			name: "should delete expired resource",
-			setupMocks: func(mockRC *client.MockResourceClient) {
-				res := &unstructured.Unstructured{}
-				res.SetNamespace("ns")
-				res.SetName("expired")
-				res.SetAnnotations(map[string]string{
-					KillAfterAnnotation: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-				})
+func TestRun(t *testing.T) {
+	fixedTime := time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)
 
-				mockRC.EXPECT().GetResourceKind().Return("Deployment")
-				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.EXPECT().Delete(mock.Anything, "ns", "expired").Return(nil)
-				mockRC.EXPECT().GetResourceName().Return("applications")
-				mockRC.EXPECT().GetResourceGroup().Return("apps")
+	t.Run("deletes expired", func(t *testing.T) {
+		fake := &fakeClient{resources: []*unstructured.Unstructured{
+			newResource("ns", "expired", map[string]string{KillAfterLabel: "1705316400"}),
+		}}
+		e := &Euthanaiser{clients: []client.ResourceClient{fake}, now: func() time.Time { return fixedTime }}
+		e.Run(context.Background())
+		assert.Equal(t, []string{"expired"}, fake.deletedNames)
+	})
+
+	t.Run("skips future", func(t *testing.T) {
+		fake := &fakeClient{resources: []*unstructured.Unstructured{
+			newResource("ns", "future", map[string]string{KillAfterLabel: "1705323600"}),
+		}}
+		e := &Euthanaiser{clients: []client.ResourceClient{fake}, now: func() time.Time { return fixedTime }}
+		e.Run(context.Background())
+		assert.Empty(t, fake.deletedNames)
+	})
+
+	t.Run("handles list error", func(t *testing.T) {
+		fake := &fakeClient{listErr: errors.New("api error")}
+		e := &Euthanaiser{clients: []client.ResourceClient{fake}, now: func() time.Time { return fixedTime }}
+		e.Run(context.Background())
+	})
+
+	t.Run("handles NotFound", func(t *testing.T) {
+		fake := &fakeClient{
+			resources: []*unstructured.Unstructured{
+				newResource("ns", "gone", map[string]string{KillAfterLabel: "1705316400"}),
 			},
-			expectedDelete: true,
-		},
-		{
-			name: "should skip future-dated resource",
-			setupMocks: func(mockRC *client.MockResourceClient) {
-				res := &unstructured.Unstructured{}
-				res.SetNamespace("ns")
-				res.SetName("future")
-				res.SetAnnotations(map[string]string{
-					KillAfterAnnotation: time.Now().Add(1 * time.Hour).Format(time.RFC3339),
-				})
-
-				mockRC.EXPECT().GetResourceName().Return("applications")
-				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-			},
-			expectedDelete: false,
-		},
-		{
-			name: "should skip resource with malformed annotation",
-			setupMocks: func(mockRC *client.MockResourceClient) {
-				res := &unstructured.Unstructured{}
-				res.SetNamespace("ns")
-				res.SetName("badtime")
-				res.SetAnnotations(map[string]string{
-					KillAfterAnnotation: "invalid-time-format",
-				})
-
-				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.EXPECT().GetResourceName().Return("applications")
-				mockRC.EXPECT().GetResourceGroup().Return("apps")
-			},
-			expectedDelete: false,
-		},
-		{
-			name: "should handle list error gracefully",
-			setupMocks: func(mockRC *client.MockResourceClient) {
-				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return(nil, fmt.Errorf("list failed"))
-				mockRC.EXPECT().GetResourceName().Return("applications")
-				mockRC.EXPECT().GetResourceGroup().Return("apps")
-			},
-			expectedDelete: false,
-		},
-		{
-			name: "should not delete if no kill-after annotation",
-			setupMocks: func(mockRC *client.MockResourceClient) {
-				res := &unstructured.Unstructured{}
-				res.SetNamespace("ns")
-				res.SetName("no-annotation")
-				res.SetAnnotations(map[string]string{
-					"some-other-annotation": "value",
-				})
-
-				mockRC.EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).Return([]*unstructured.Unstructured{res}, nil)
-				mockRC.EXPECT().GetResourceName().Return("applications")
-			},
-			expectedDelete: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockRC := client.NewMockResourceClient(t)
-			tt.setupMocks(mockRC)
-
-			e := &euthanaiser{
-				log:     logrus.New(),
-				clients: []client.ResourceClient{mockRC},
-			}
-
-			e.Run(context.Background())
-
-			if tt.expectedDelete {
-				mockRC.AssertCalled(t, "Delete", mock.Anything, "ns", mock.Anything)
-			} else {
-				mockRC.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-			}
-		})
-	}
+			deleteErr: k8serrors.NewNotFound(schema.GroupResource{}, "gone"),
+		}
+		e := &Euthanaiser{clients: []client.ResourceClient{fake}, now: func() time.Time { return fixedTime }}
+		e.Run(context.Background())
+	})
 }
 
-func TestEuthanaiser_Run_DelegatesToCorrectHandler(t *testing.T) {
-	tests := []struct {
-		name               string
-		ownerRefs          []metav1.OwnerReference
-		expectOwnerHandler bool
-	}{
-		{
-			name:               "no owner reference, uses listing handler",
-			ownerRefs:          nil,
-			expectOwnerHandler: false,
-		},
-		{
-			name: "has owner reference, uses owner handler",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					Kind: "OwnerKind",
-					Name: "owner1",
-				},
-			},
-			expectOwnerHandler: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resource := &unstructured.Unstructured{}
-			resource.SetNamespace("ns")
-			resource.SetName("resource1")
-			resource.SetAnnotations(map[string]string{
-				KillAfterAnnotation: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-			})
-			resource.SetOwnerReferences(tt.ownerRefs)
-
-			ownerHandler := client.NewMockResourceClient(t)
-			resourceHandler := client.NewMockResourceClient(t)
-
-			resourceHandler.
-				EXPECT().List(mock.Anything, metav1.NamespaceAll, mock.AnythingOfType("client.ListOption")).
-				Return([]*unstructured.Unstructured{resource}, nil)
-
-			// identities for rc handlers
-			resourceHandler.EXPECT().GetResourceName().Return("resource").Maybe()
-			resourceHandler.EXPECT().GetResourceKind().Return("ResourceKind").Maybe()
-			resourceHandler.EXPECT().GetResourceGroup().Return("apps").Maybe()
-
-			if tt.expectOwnerHandler {
-				ownerHandler.EXPECT().GetResourceName().Return("owner").Maybe()
-				ownerHandler.EXPECT().GetResourceKind().Return("OwnerKind").Maybe()
-				ownerHandler.EXPECT().GetResourceGroup().Return("apps").Maybe()
-
-				// Expect deletion of OWNER, not child
-				ownerHandler.EXPECT().Delete(mock.Anything, "ns", "owner1").Return(nil).Once()
-			}
-
-			if !tt.expectOwnerHandler {
-				// Expect deletion of CHILD itself
-				resourceHandler.EXPECT().Delete(mock.Anything, "ns", "resource1").Return(nil).Once()
-			}
-
-			e := &euthanaiser{
-				log: logrus.New(),
-				clients: []client.ResourceClient{
-					resourceHandler,
-				},
-				resourceHandlersByKind: client.HandlerByKind{
-					"OwnerKind": ownerHandler,
-				},
-			}
-
-			e.Run(context.Background())
-
-			if tt.expectOwnerHandler {
-				ownerHandler.AssertCalled(t, "Delete", mock.Anything, "ns", "owner1")
-				resourceHandler.AssertNotCalled(t, "Delete", mock.Anything, "ns", "resource1")
-			} else {
-				resourceHandler.AssertCalled(t, "Delete", mock.Anything, "ns", "resource1")
-				ownerHandler.AssertNotCalled(t, "Delete", mock.Anything, mock.Anything, mock.Anything)
-			}
-		})
-	}
+func newResource(namespace, name string, labels map[string]string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetNamespace(namespace)
+	u.SetName(name)
+	u.SetLabels(labels)
+	return u
 }

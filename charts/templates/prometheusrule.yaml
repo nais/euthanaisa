@@ -16,16 +16,13 @@ spec:
           annotations:
             consequence: Workloads that should be removed, aren't.
             action: "Check logs in euthanaisa"
-
-{{- range .Values.resources }}
-        - alert: EuthanaisaErrors{{ .resource | replace "-" "_" | title }}
-          expr: increase(euthanaisa_{{ .resource | replace "-" "_" }}_errors[30m]) > 0
-          for: 6h
+        - alert: EuthanaisaErrors
+          expr: increase(euthanaisa_errors_total[30m]) > 0
+          for: 5m
           labels:
             namespace: nais-system
             severity: warning
           annotations:
-            consequence: "{{ .resource | title }} workloads that should be removed aren't."
-            action: "Check euthanaisa logs for {{ .resource }}"
-{{- end }}
+            consequence: "Resources that should be removed aren't."
+            action: "Check euthanaisa logs"
 {{- end }}
