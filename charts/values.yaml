@@ -36,3 +36,6 @@ resources:
   - resource: rolebindings
     group: rbac.authorization.k8s.io
     version: v1
+  - resource: aivenapplications
+    group: aiven.nais.io
+    version: v1

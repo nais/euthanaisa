@@ -26,3 +26,7 @@
   kind: RoleBinding
   group: rbac.authorization.k8s.io
   version: v1
+- resource: aivenapplications
+  kind: AivenApplication
+  group: aiven.nais.io
+  version: v1
