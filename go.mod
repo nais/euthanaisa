@@ -1,6 +1,6 @@
 module github.com/nais/euthanaisa
 
-go 1.25.5
+go 1.26.1
 
 tool (
 	github.com/securego/gosec/v2/cmd/gosec
