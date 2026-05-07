@@ -50,16 +50,20 @@ jobs:
           sed -i "s/^version: .*/version: ${{ steps.build-push-sign.outputs.version }}/g" charts/Chart.yaml
           helm package charts
           helm push ${{ env.NAME }}*.tgz ${{ env.IMAGE_REPOSITORY }}
-  rollout:
+  deploy:
     if: github.ref == 'refs/heads/main'
     needs: build-and-push
     runs-on: fasit-deploy
     permissions:
       id-token: write
     steps:
-      - uses: nais/fasit-deploy@6e5772c21e82cb101537dd5e3ce78d70e2ae6402 # ratchet:nais/fasit-deploy@v3
+      - uses: nais/fasit-deploy@97187355184a7f0f4b7a36a2b49a86ce02240f7b # ratchet:nais/fasit-deploy@v4.0.0
         with:
           chart: ${{ env.IMAGE_REPOSITORY }}/${{ env.NAME }}
           version: ${{ needs.build-and-push.outputs.version }}
-          target: |
-            {"userWorkloads":"true"}
+          targets: |
+            [
+              { "target": { "kind": "tenant", "tenant": "ci-nais" }, "wait": true },
+              { "target": { "kind": "tenant" } },
+              { "target": { "kind": "onprem" } }
+            ]
