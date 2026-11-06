@@ -1,6 +1,9 @@
 environmentKinds:
   - tenant
   - onprem
+dependencies:
+  - allOf:
+      - monitoring-crds
 values:
   apiserverIP:
     displayName: Kubernetes apiserver IP
